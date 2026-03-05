@@ -73,9 +73,9 @@ export default {
           light: "hsl(var(--navy-light))",
           dark: "hsl(var(--navy-dark))",
         },
-        green: {
-          DEFAULT: "hsl(var(--green))",
-          light: "hsl(var(--green-light))",
+        "blue-light": {
+          DEFAULT: "hsl(var(--blue-light))",
+          light: "hsl(var(--blue-lighter))",
         },
         orange: {
           DEFAULT: "hsl(var(--orange))",
