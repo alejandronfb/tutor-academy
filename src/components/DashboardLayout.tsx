@@ -39,7 +39,7 @@ function AppSidebar() {
       <SidebarContent>
         <div className="px-4 py-4">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <div className="gradient-green flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+            <div className="gradient-orange flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
               <GraduationCap className="h-4 w-4 text-accent-foreground" />
             </div>
             {!collapsed && (
