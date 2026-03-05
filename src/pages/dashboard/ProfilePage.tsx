@@ -40,7 +40,7 @@ export default function ProfilePage() {
           <p className="text-sm text-muted-foreground mt-1">Your public tutor profile</p>
         </div>
         <Button variant="outline" size="sm" onClick={handleCopy}>
-          {copied ? <CheckCircle className="mr-1 h-4 w-4 text-success" /> : <Copy className="mr-1 h-4 w-4" />}
+          {copied ? <CheckCircle className="mr-1 h-4 w-4 text-primary" /> : <Copy className="mr-1 h-4 w-4" />}
           {copied ? "Copied!" : "Share Profile"}
         </Button>
       </div>
