@@ -52,75 +52,66 @@ export default function Register() {
 
     setLoading(true);
 
-    // Validate invitation code
-    const { data: codeData, error: codeError } = await supabase
-      .from("invitation_codes")
-      .select("id, used_by")
-      .eq("code", form.invitationCode)
-      .maybeSingle();
+    try {
+      // Validate invitation code
+      const { data: codeData, error: codeError } = await (supabase as any)
+        .from("invitation_codes")
+        .select("id, used_by")
+        .eq("code", form.invitationCode)
+        .maybeSingle();
 
-    if (codeError || !codeData) {
-      setLoading(false);
-      toast({ title: "Invalid invitation code", description: "Please check your code and try again.", variant: "destructive" });
-      setStep(1);
-      return;
-    }
+      if (codeError || !codeData) {
+        toast({ title: "Invalid invitation code", description: "Please check your code and try again.", variant: "destructive" });
+        setStep(1);
+        setLoading(false);
+        return;
+      }
 
-    if (codeData.used_by) {
-      setLoading(false);
-      toast({ title: "Code already used", description: "This invitation code has already been used.", variant: "destructive" });
-      setStep(1);
-      return;
-    }
+      if (codeData.used_by) {
+        toast({ title: "Code already used", description: "This invitation code has already been used.", variant: "destructive" });
+        setStep(1);
+        setLoading(false);
+        return;
+      }
 
-    // Sign up
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: { emailRedirectTo: window.location.origin },
-    });
-
-    if (authError || !authData.user) {
-      setLoading(false);
-      toast({ title: "Registration failed", description: authError?.message || "Unknown error", variant: "destructive" });
-      return;
-    }
-
-    // Create profile
-    await supabase.from("tutor_profiles").insert({
-      id: authData.user.id,
-      full_name: form.fullName,
-      country: form.country,
-      native_language: form.nativeLanguage,
-      english_level: form.englishLevel,
-      years_experience: form.yearsExperience,
-      teaching_modality: form.teachingModality,
-      specializations: form.specializations,
-      linkedin_url: form.linkedinUrl || null,
-    });
-
-    // Mark invitation code as used
-    await supabase.from("invitation_codes").update({
-      used_by: authData.user.id,
-      used_at: new Date().toISOString(),
-    }).eq("id", codeData.id);
-
-    // Award Verified badge
-    const { data: verifiedBadge } = await supabase
-      .from("badges")
-      .select("id")
-      .eq("name", "Verified LatinHire Tutor")
-      .maybeSingle();
-
-    if (verifiedBadge) {
-      await supabase.from("user_badges").insert({
-        tutor_id: authData.user.id,
-        badge_id: verifiedBadge.id,
+      // Sign up
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: { emailRedirectTo: window.location.origin },
       });
+
+      if (authError || !authData.user) {
+        toast({ title: "Registration failed", description: authError?.message || "Unknown error", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+
+      // Create profile
+      await (supabase as any).from("tutor_profiles").insert({
+        id: authData.user.id,
+        full_name: form.fullName,
+        country: form.country,
+        native_language: form.nativeLanguage,
+        english_level: form.englishLevel,
+        years_experience: form.yearsExperience,
+        teaching_modality: form.teachingModality,
+        specializations: form.specializations,
+        linkedin_url: form.linkedinUrl || null,
+      });
+
+      // Mark invitation code as used
+      await (supabase as any).from("invitation_codes").update({
+        used_by: authData.user.id,
+        used_at: new Date().toISOString(),
+      }).eq("id", codeData.id);
+
+      navigate("/onboarding");
+    } catch (err) {
+      toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" });
     }
 
     setLoading(false);
-    navigate("/onboarding");
   };
 
   return (
@@ -134,7 +125,6 @@ export default function Register() {
             </div>
             <h1 className="text-2xl font-bold text-foreground">Create Your Account</h1>
             <p className="text-sm text-muted-foreground mt-1">Step {step} of 3</p>
-            {/* Progress bar */}
             <div className="mt-4 flex gap-2">
               {[1, 2, 3].map((s) => (
                 <div key={s} className={`h-1.5 flex-1 rounded-full transition-colors ${s <= step ? "gradient-green" : "bg-muted"}`} />

@@ -8,13 +8,11 @@ import { TUTOR_LEVELS } from "@/lib/constants";
 
 export default function DashboardHome() {
   const [profile, setProfile] = useState<any>(null);
-  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
-        setUser(data.user);
-        supabase.from("tutor_profiles").select("*").eq("id", data.user.id).maybeSingle().then(({ data: p }) => setProfile(p));
+        (supabase as any).from("tutor_profiles").select("*").eq("id", data.user.id).maybeSingle().then(({ data: p }: any) => setProfile(p));
       }
     });
   }, []);

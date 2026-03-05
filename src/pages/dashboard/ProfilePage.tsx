@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Copy, CheckCircle, Award, MapPin, Clock, BookOpen } from "lucide-react";
+import { Copy, CheckCircle, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { TUTOR_LEVELS } from "@/lib/constants";
 
@@ -13,7 +13,7 @@ export default function ProfilePage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
-        supabase.from("tutor_profiles").select("*").eq("id", data.user.id).maybeSingle().then(({ data: p }) => setProfile(p));
+        (supabase as any).from("tutor_profiles").select("*").eq("id", data.user.id).maybeSingle().then(({ data: p }: any) => setProfile(p));
       }
     });
   }, []);
