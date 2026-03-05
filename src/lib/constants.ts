@@ -22,7 +22,7 @@ export const SPECIALIZATIONS = [
 export const TUTOR_LEVELS = {
   1: { name: "Certified Tutor", color: "bg-muted" },
   2: { name: "Advanced Tutor", color: "bg-primary" },
-  3: { name: "Expert Tutor", color: "bg-success" },
+  3: { name: "Expert Tutor", color: "bg-primary" },
   4: { name: "Master Tutor", color: "gradient-navy" },
 } as const;
 
