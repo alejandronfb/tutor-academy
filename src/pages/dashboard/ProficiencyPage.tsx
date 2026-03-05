@@ -36,7 +36,7 @@ export default function ProficiencyPage() {
                   <span className="text-sm font-medium text-foreground">{section.section}</span>
                   {section.questions > 0 && <span className="text-xs text-muted-foreground ml-2">{section.questions} questions</span>}
                 </div>
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${section.status === "Ready" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${section.status === "Ready" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
                   {section.status}
                 </span>
               </div>

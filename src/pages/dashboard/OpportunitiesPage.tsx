@@ -65,7 +65,7 @@ export default function OpportunitiesPage() {
         </Button>
         <div className="rounded-xl border bg-card p-6 md:p-8 shadow-card">
           <div className="flex items-center gap-2 mb-1">
-            <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">Open</span>
+            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">Open</span>
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-2">{selectedOpp.title}</h1>
           <p className="text-sm text-muted-foreground mb-6">{selectedOpp.client}</p>
@@ -125,11 +125,11 @@ export default function OpportunitiesPage() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-semibold text-foreground">{opp.title}</h3>
-                  <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">Open</span>
+                  <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">Open</span>
                 </div>
                 <p className="text-sm text-muted-foreground">{opp.client}</p>
               </div>
-              <span className="font-semibold text-success text-sm">{opp.payRate}</span>
+              <span className="font-semibold text-primary text-sm">{opp.payRate}</span>
             </div>
             <div className="flex flex-wrap gap-4 mt-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">{opp.modality === "Video" ? <Video className="h-3 w-3" /> : <MessageSquare className="h-3 w-3" />} {opp.modality}</span>

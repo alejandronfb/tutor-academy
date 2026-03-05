@@ -46,15 +46,15 @@
     --sidebar-ring: 38 93% 56%;
 
     /* Custom tokens */
-    --success: 142 71% 45%;
+    --success: 204 78% 47%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
     --navy: 200 82% 30%;
     --navy-light: 200 78% 47%;
     --navy-dark: 200 85% 22%;
-    --green: 142 71% 45%;
-    --green-light: 142 60% 55%;
+    --blue-light: 204 78% 47%;
+    --blue-lighter: 204 70% 58%;
     --orange: 38 93% 56%;
     --orange-light: 38 95% 65%;
   }
@@ -114,8 +114,8 @@
     background: linear-gradient(135deg, hsl(200, 82%, 30%) 0%, hsl(200, 78%, 47%) 50%, hsl(200, 82%, 30%) 100%);
   }
 
-  .gradient-green {
-    background: linear-gradient(135deg, hsl(142, 71%, 45%), hsl(142, 60%, 55%));
+  .gradient-blue-light {
+    background: linear-gradient(135deg, hsl(204, 78%, 47%), hsl(204, 70%, 58%));
   }
 
   .gradient-orange {

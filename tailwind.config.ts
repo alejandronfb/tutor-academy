@@ -73,9 +73,9 @@ export default {
           light: "hsl(var(--navy-light))",
           dark: "hsl(var(--navy-dark))",
         },
-        green: {
-          DEFAULT: "hsl(var(--green))",
-          light: "hsl(var(--green-light))",
+        "blue-light": {
+          DEFAULT: "hsl(var(--blue-light))",
+          light: "hsl(var(--blue-lighter))",
         },
         orange: {
           DEFAULT: "hsl(var(--orange))",
@@ -108,9 +108,9 @@ export default {
           from: { opacity: "0", transform: "scale(0.95)" },
           to: { opacity: "1", transform: "scale(1)" },
         },
-        "pulse-green": {
-          "0%, 100%": { boxShadow: "0 0 0 0 hsl(142, 71%, 45%, 0.4)" },
-          "50%": { boxShadow: "0 0 0 8px hsl(142, 71%, 45%, 0)" },
+        "pulse-blue": {
+          "0%, 100%": { boxShadow: "0 0 0 0 hsl(204, 78%, 47%, 0.4)" },
+          "50%": { boxShadow: "0 0 0 8px hsl(204, 78%, 47%, 0)" },
         },
         "pulse-orange": {
           "0%, 100%": { boxShadow: "0 0 0 0 hsl(38, 93%, 56%, 0.4)" },

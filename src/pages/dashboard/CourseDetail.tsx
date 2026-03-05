@@ -126,7 +126,7 @@ export default function CourseDetail() {
                       <button
                         key={li}
                         onClick={() => setActiveLesson(li)}
-                        className={`w-full text-left px-3 py-1.5 rounded text-xs transition-colors ${li === activeLesson ? "bg-success/10 text-success font-medium" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`w-full text-left px-3 py-1.5 rounded text-xs transition-colors ${li === activeLesson ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         {lesson.title}
                       </button>
@@ -138,10 +138,10 @@ export default function CourseDetail() {
           </div>
 
           {course.certificate && (
-            <div className="mt-4 p-3 rounded-lg bg-success/10 border border-success/20">
+            <div className="mt-4 p-3 rounded-lg bg-accent/10 border border-accent/20">
               <div className="flex items-center gap-2">
-                <Award className="h-4 w-4 text-success" />
-                <span className="text-xs font-medium text-success">Certificate</span>
+                <Award className="h-4 w-4 text-accent" />
+                <span className="text-xs font-medium text-accent">Certificate</span>
               </div>
               <p className="text-xs text-muted-foreground mt-1">{course.certificate}</p>
             </div>

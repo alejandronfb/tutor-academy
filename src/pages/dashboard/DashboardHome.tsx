@@ -44,7 +44,7 @@ export default function DashboardHome() {
       <div className="grid gap-4 md:grid-cols-4">
         {[
           { label: "Courses Completed", value: "0/7", icon: BookOpen, color: "text-primary" },
-          { label: "Certifications Earned", value: "0", icon: Award, color: "text-success" },
+          { label: "Certifications Earned", value: "0", icon: Award, color: "text-accent" },
           { label: "Badges Unlocked", value: "1", icon: Trophy, color: "text-warning" },
           { label: "Current Level", value: levelInfo.name, icon: TrendingUp, color: "text-primary" },
         ].map((stat) => (
@@ -61,7 +61,7 @@ export default function DashboardHome() {
       {/* Activity ranking */}
       <div className="rounded-xl border bg-card p-5 shadow-card">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg gradient-green">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg gradient-blue-light">
             <TrendingUp className="h-5 w-5 text-accent-foreground" />
           </div>
           <div>
