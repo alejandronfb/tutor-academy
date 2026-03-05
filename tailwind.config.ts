@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Open Sans', 'system-ui', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -77,6 +77,10 @@ export default {
           DEFAULT: "hsl(var(--green))",
           light: "hsl(var(--green-light))",
         },
+        orange: {
+          DEFAULT: "hsl(var(--orange))",
+          light: "hsl(var(--orange-light))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -107,6 +111,10 @@ export default {
         "pulse-green": {
           "0%, 100%": { boxShadow: "0 0 0 0 hsl(142, 71%, 45%, 0.4)" },
           "50%": { boxShadow: "0 0 0 8px hsl(142, 71%, 45%, 0)" },
+        },
+        "pulse-orange": {
+          "0%, 100%": { boxShadow: "0 0 0 0 hsl(38, 93%, 56%, 0.4)" },
+          "50%": { boxShadow: "0 0 0 8px hsl(38, 93%, 56%, 0)" },
         },
       },
       animation: {
