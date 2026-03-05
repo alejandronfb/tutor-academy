@@ -24,7 +24,7 @@ const Index = () => {
         </div>
         <div className="container relative z-10 py-20 md:py-32">
           <div className="max-w-2xl">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-success/20 px-4 py-1.5 text-sm font-medium text-success">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent/20 px-4 py-1.5 text-sm font-medium text-accent">
               <Sparkles className="h-4 w-4" />
               Free professional development
             </div>
@@ -63,7 +63,7 @@ const Index = () => {
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl gradient-navy">
                 <step.icon className="h-6 w-6 text-primary-foreground" />
               </div>
-              <div className="absolute -top-3 left-6 flex h-7 w-7 items-center justify-center rounded-full gradient-green text-xs font-bold text-accent-foreground">
+              <div className="absolute -top-3 left-6 flex h-7 w-7 items-center justify-center rounded-full gradient-orange text-xs font-bold text-accent-foreground">
                 {i + 1}
               </div>
               <h3 className="mb-2 text-lg font-semibold text-foreground">{step.title}</h3>
@@ -121,7 +121,7 @@ const Index = () => {
               key={cert}
               className="flex items-center gap-3 rounded-xl border bg-card p-5 shadow-card"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg gradient-green">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg gradient-orange">
                 <CheckCircle className="h-5 w-5 text-accent-foreground" />
               </div>
               <span className="font-medium text-foreground text-sm">{cert}</span>
@@ -140,7 +140,7 @@ const Index = () => {
               { value: "7", label: "Professional Courses" },
             ].map((stat) => (
               <div key={stat.label}>
-                <div className="text-4xl font-extrabold text-success mb-1">{stat.value}</div>
+                <div className="text-4xl font-extrabold text-accent mb-1">{stat.value}</div>
                 <div className="text-sm text-primary-foreground/60">{stat.label}</div>
               </div>
             ))}
