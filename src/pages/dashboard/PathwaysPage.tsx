@@ -73,7 +73,7 @@ export default function PathwaysPage() {
                 <div className="flex items-center gap-2 mb-1">
                   <h2 className="text-lg font-semibold text-foreground">{pathway.name}</h2>
                   {pathway.required && (
-                    <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">Recommended First</span>
+                    <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">Recommended First</span>
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground mb-4">{pathway.description}</p>
@@ -106,11 +106,11 @@ export default function PathwaysPage() {
           {[
             { level: 1, name: "Certified Tutor", req: "Complete Foundations course", color: "bg-muted" },
             { level: 2, name: "Advanced Tutor", req: "+2 specialization courses + 1 modality course", color: "bg-primary/10" },
-            { level: 3, name: "Expert Tutor", req: "All courses in primary pathway + proficiency test", color: "bg-success/10" },
+            { level: 3, name: "Expert Tutor", req: "All courses in primary pathway + proficiency test", color: "bg-primary/10" },
             { level: 4, name: "Master Tutor", req: "All certifications + 500 hours logged", color: "gradient-navy" },
           ].map((level, i) => (
             <div key={level.level} className={`rounded-xl p-4 ${level.level === 4 ? "gradient-navy" : "border"}`}>
-              <div className={`text-xs font-medium uppercase tracking-wider mb-1 ${level.level === 4 ? "text-success" : "text-muted-foreground"}`}>
+              <div className={`text-xs font-medium uppercase tracking-wider mb-1 ${level.level === 4 ? "text-accent" : "text-muted-foreground"}`}>
                 Level {level.level}
               </div>
               <div className={`font-semibold mb-1 ${level.level === 4 ? "text-primary-foreground" : "text-foreground"}`}>{level.name}</div>
