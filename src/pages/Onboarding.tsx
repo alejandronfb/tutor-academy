@@ -35,7 +35,7 @@ export default function Onboarding() {
           <p className="text-sm text-muted-foreground mt-1">Step {step} of 3 — Let's personalize your experience</p>
           <div className="mt-4 flex gap-2">
             {[1, 2, 3].map((s) => (
-              <div key={s} className={`h-1.5 flex-1 rounded-full transition-colors ${s <= step ? "gradient-green" : "bg-muted"}`} />
+              <div key={s} className={`h-1.5 flex-1 rounded-full transition-colors ${s <= step ? "gradient-blue-light" : "bg-muted"}`} />
             ))}
           </div>
         </div>
