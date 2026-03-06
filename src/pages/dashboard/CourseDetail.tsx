@@ -69,6 +69,28 @@ export default function CourseDetail() {
     enabled: !!course,
   });
 
+  // Fetch user's passed quiz attempts for this course
+  const { data: passedQuizIds = [] } = useQuery({
+    queryKey: ["passed-quizzes", course?.id],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !course) return [];
+      const allQuizIds = [
+        ...course.modules.filter((m: any) => m.quiz).map((m: any) => m.quiz.id),
+        ...(course.finalQuiz ? [course.finalQuiz.id] : []),
+      ];
+      if (allQuizIds.length === 0) return [];
+      const { data } = await supabase
+        .from("quiz_attempts")
+        .select("quiz_id")
+        .eq("tutor_id", user.id)
+        .eq("passed", true)
+        .in("quiz_id", allQuizIds);
+      return [...new Set((data || []).map((d) => d.quiz_id))];
+    },
+    enabled: !!course,
+  });
+
   const markCompleteMutation = useMutation({
     mutationFn: async (lessonId: string) => {
       const { data: { user } } = await supabase.auth.getUser();
