@@ -295,17 +295,23 @@ export default function CourseDetail() {
           </div>
 
           {/* Final Exam button */}
-          {course.finalQuiz && (
-            <button
-              onClick={openFinalExam}
-              className={`w-full mt-3 p-3 rounded-lg border text-left transition-colors ${showQuiz?.isFinal ? "bg-primary/10 border-primary/30" : "border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/20"}`}
-            >
-              <div className="flex items-center gap-2">
-                <ClipboardList className="h-4 w-4 text-amber-600" />
-                <span className="text-xs font-medium text-amber-600">Final Exam</span>
-              </div>
-            </button>
-          )}
+          {course.finalQuiz && (() => {
+            const finalPassed = passedQuizIds.includes(course.finalQuiz.id);
+            return (
+              <button
+                onClick={openFinalExam}
+                className={`w-full mt-3 p-3 rounded-lg border text-left transition-colors ${finalPassed ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20" : showQuiz?.isFinal ? "bg-primary/10 border-primary/30" : "border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/20"}`}
+              >
+                <div className="flex items-center gap-2">
+                  {finalPassed ? (
+                    <><CheckCircle className="h-4 w-4 text-emerald-600" /><span className="text-xs font-medium text-emerald-600">Final Exam Passed</span></>
+                  ) : (
+                    <><ClipboardList className="h-4 w-4 text-amber-600" /><span className="text-xs font-medium text-amber-600">Final Exam</span></>
+                  )}
+                </div>
+              </button>
+            );
+          })()}
 
           {course.certificate_title && (
             <div className="mt-3 p-3 rounded-lg bg-accent/10 border border-accent/20">
