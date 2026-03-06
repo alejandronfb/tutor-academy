@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import QRCode from "qrcode";
 
 interface CertificateData {
   tutorName: string;
@@ -7,17 +8,25 @@ interface CertificateData {
   verificationId: string;
 }
 
-export function generateCertificatePdf(data: CertificateData) {
+export async function generateCertificatePdf(data: CertificateData) {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const w = doc.internal.pageSize.getWidth();
   const h = doc.internal.pageSize.getHeight();
+
+  // Generate QR code as data URL
+  const verifyUrl = `${window.location.origin}/verify/${data.verificationId}`;
+  const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
+    width: 200,
+    margin: 1,
+    color: { dark: "#1e3a8a", light: "#f8fafc" },
+  });
 
   // Background
   doc.setFillColor(248, 250, 252);
   doc.rect(0, 0, w, h, "F");
 
   // Border frame
-  doc.setDrawColor(30, 58, 138); // navy
+  doc.setDrawColor(30, 58, 138);
   doc.setLineWidth(2);
   doc.rect(10, 10, w - 20, h - 20);
   doc.setLineWidth(0.5);
@@ -95,11 +104,22 @@ export function generateCertificatePdf(data: CertificateData) {
   doc.setTextColor(15, 23, 42);
   doc.text(data.verificationId.substring(0, 8).toUpperCase(), rightCol, 145, { align: "center" });
 
+  // QR Code (bottom-right area)
+  const qrSize = 28;
+  const qrX = w - 20 - qrSize;
+  const qrY = h - 20 - qrSize;
+  doc.addImage(qrDataUrl, "PNG", qrX, qrY, qrSize, qrSize);
+
+  // QR label
+  doc.setFontSize(7);
+  doc.setTextColor(100, 116, 139);
+  doc.text("Scan to verify", qrX + qrSize / 2, qrY + qrSize + 4, { align: "center" });
+
   // Footer
   doc.setFontSize(8);
   doc.setTextColor(148, 163, 184);
   doc.text(
-    `Verify at: ${window.location.origin}/verify/${data.verificationId}`,
+    `Verify at: ${verifyUrl}`,
     w / 2, h - 22, { align: "center" }
   );
   doc.text("LatinHire Academy — Professional Tutor Development", w / 2, h - 17, { align: "center" });
