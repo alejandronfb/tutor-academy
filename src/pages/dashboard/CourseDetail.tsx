@@ -69,6 +69,28 @@ export default function CourseDetail() {
     enabled: !!course,
   });
 
+  // Fetch user's passed quiz attempts for this course
+  const { data: passedQuizIds = [] } = useQuery({
+    queryKey: ["passed-quizzes", course?.id],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !course) return [];
+      const allQuizIds = [
+        ...course.modules.filter((m: any) => m.quiz).map((m: any) => m.quiz.id),
+        ...(course.finalQuiz ? [course.finalQuiz.id] : []),
+      ];
+      if (allQuizIds.length === 0) return [];
+      const { data } = await supabase
+        .from("quiz_attempts")
+        .select("quiz_id")
+        .eq("tutor_id", user.id)
+        .eq("passed", true)
+        .in("quiz_id", allQuizIds);
+      return [...new Set((data || []).map((d) => d.quiz_id))];
+    },
+    enabled: !!course,
+  });
+
   const markCompleteMutation = useMutation({
     mutationFn: async (lessonId: string) => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -257,9 +279,13 @@ export default function CourseDetail() {
                     {mod.quiz && (
                       <button
                         onClick={() => openModuleQuiz(mod)}
-                        className="w-full text-left px-3 py-1.5 rounded text-xs text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20 flex items-center gap-1"
+                        className={`w-full text-left px-3 py-1.5 rounded text-xs flex items-center gap-1 ${passedQuizIds.includes(mod.quiz.id) ? "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20" : "text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20"}`}
                       >
-                        <ClipboardList className="h-3 w-3" /> Module Quiz
+                        {passedQuizIds.includes(mod.quiz.id) ? (
+                          <><CheckCircle className="h-3 w-3" /> Quiz Passed</>
+                        ) : (
+                          <><ClipboardList className="h-3 w-3" /> Module Quiz</>
+                        )}
                       </button>
                     )}
                   </div>
@@ -269,17 +295,23 @@ export default function CourseDetail() {
           </div>
 
           {/* Final Exam button */}
-          {course.finalQuiz && (
-            <button
-              onClick={openFinalExam}
-              className={`w-full mt-3 p-3 rounded-lg border text-left transition-colors ${showQuiz?.isFinal ? "bg-primary/10 border-primary/30" : "border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/20"}`}
-            >
-              <div className="flex items-center gap-2">
-                <ClipboardList className="h-4 w-4 text-amber-600" />
-                <span className="text-xs font-medium text-amber-600">Final Exam</span>
-              </div>
-            </button>
-          )}
+          {course.finalQuiz && (() => {
+            const finalPassed = passedQuizIds.includes(course.finalQuiz.id);
+            return (
+              <button
+                onClick={openFinalExam}
+                className={`w-full mt-3 p-3 rounded-lg border text-left transition-colors ${finalPassed ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20" : showQuiz?.isFinal ? "bg-primary/10 border-primary/30" : "border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/20"}`}
+              >
+                <div className="flex items-center gap-2">
+                  {finalPassed ? (
+                    <><CheckCircle className="h-4 w-4 text-emerald-600" /><span className="text-xs font-medium text-emerald-600">Final Exam Passed</span></>
+                  ) : (
+                    <><ClipboardList className="h-4 w-4 text-amber-600" /><span className="text-xs font-medium text-amber-600">Final Exam</span></>
+                  )}
+                </div>
+              </button>
+            );
+          })()}
 
           {course.certificate_title && (
             <div className="mt-3 p-3 rounded-lg bg-accent/10 border border-accent/20">

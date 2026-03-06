@@ -76,6 +76,7 @@ export default function QuizView({ quizId, courseId, moduleTitle, isFinal, passi
     queryClient.invalidateQueries({ queryKey: ["dashboard-home"] });
     queryClient.invalidateQueries({ queryKey: ["badges"] });
     queryClient.invalidateQueries({ queryKey: ["certifications"] });
+    queryClient.invalidateQueries({ queryKey: ["passed-quizzes"] });
   };
 
   const handleCourseCompletion = async (userId: string, cId: string) => {
