@@ -88,7 +88,7 @@ export default function Register() {
       }
 
       // Create profile
-      await supabase.from("tutor_profiles").insert({
+      const { error: profileError } = await supabase.from("tutor_profiles").insert({
         id: authData.user.id,
         full_name: form.fullName,
         country: form.country,
@@ -99,6 +99,12 @@ export default function Register() {
         specializations: form.specializations,
         linkedin_url: form.linkedinUrl || null,
       });
+
+      if (profileError) {
+        toast({ title: "Profile creation failed", description: profileError.message, variant: "destructive" });
+        setLoading(false);
+        return;
+      }
 
       // Mark invitation code as used
       await supabase.from("invitation_codes").update({
