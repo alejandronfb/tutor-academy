@@ -189,6 +189,7 @@ export default function CourseDetail() {
           {showQuiz ? (
             <QuizView
               quizId={showQuiz.quizId}
+              courseId={course.id}
               moduleTitle={showQuiz.moduleTitle}
               isFinal={showQuiz.isFinal}
               passingScore={showQuiz.passingScore}
