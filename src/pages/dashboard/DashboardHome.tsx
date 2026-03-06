@@ -12,7 +12,7 @@ export default function DashboardHome() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
-        (supabase as any).from("tutor_profiles").select("*").eq("id", data.user.id).maybeSingle().then(({ data: p }: any) => setProfile(p));
+        supabase.from("tutor_profiles").select("*").eq("id", data.user.id).maybeSingle().then(({ data: p }) => setProfile(p));
       }
     });
   }, []);

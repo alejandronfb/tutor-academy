@@ -2,15 +2,18 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { GraduationCap, ArrowRight, BookOpen, Video, MessageSquare } from "lucide-react";
 import { SPECIALIZATIONS, MODALITIES, PATHWAYS } from "@/lib/constants";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
   const [specs, setSpecs] = useState<string[]>([]);
   const [modality, setModality] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const toggleSpec = (spec: string) => {
     setSpecs((prev) => prev.includes(spec) ? prev.filter((s) => s !== spec) : [...prev, spec]);
@@ -23,6 +26,40 @@ export default function Onboarding() {
     if (p.id === "writing" && specs.some((s) => s.includes("Writing"))) return true;
     return false;
   });
+
+  const handleFinish = async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const updates: Record<string, unknown> = {};
+        if (specs.length > 0) updates.specializations = specs;
+        if (modality) updates.teaching_modality = modality;
+
+        if (Object.keys(updates).length > 0) {
+          await supabase.from("tutor_profiles").update(updates).eq("id", user.id);
+        }
+
+        // Award "Verified LatinHire Tutor" badge
+        const { data: badge } = await supabase
+          .from("badges")
+          .select("id")
+          .eq("unlock_type", "registration")
+          .maybeSingle();
+
+        if (badge) {
+          await supabase.from("user_badges").insert({
+            tutor_id: user.id,
+            badge_id: badge.id,
+          });
+        }
+      }
+      navigate("/dashboard");
+    } catch {
+      toast({ title: "Error", description: "Could not save preferences.", variant: "destructive" });
+    }
+    setLoading(false);
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-secondary/30 px-4">
@@ -102,12 +139,13 @@ export default function Onboarding() {
           <Button
             className="flex-1"
             variant={step === 3 ? "success" : "default"}
+            disabled={loading}
             onClick={() => {
               if (step < 3) setStep(step + 1);
-              else navigate("/dashboard");
+              else handleFinish();
             }}
           >
-            {step < 3 ? <>Next <ArrowRight className="ml-1 h-4 w-4" /></> : "Start Learning 🚀"}
+            {step < 3 ? <>Next <ArrowRight className="ml-1 h-4 w-4" /></> : loading ? "Saving…" : "Start Learning 🚀"}
           </Button>
         </div>
       </div>

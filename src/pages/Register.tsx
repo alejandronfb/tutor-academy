@@ -54,7 +54,7 @@ export default function Register() {
 
     try {
       // Validate invitation code
-      const { data: codeData, error: codeError } = await (supabase as any)
+      const { data: codeData, error: codeError } = await supabase
         .from("invitation_codes")
         .select("id, used_by")
         .eq("code", form.invitationCode)
@@ -88,7 +88,7 @@ export default function Register() {
       }
 
       // Create profile
-      await (supabase as any).from("tutor_profiles").insert({
+      await supabase.from("tutor_profiles").insert({
         id: authData.user.id,
         full_name: form.fullName,
         country: form.country,
@@ -101,7 +101,7 @@ export default function Register() {
       });
 
       // Mark invitation code as used
-      await (supabase as any).from("invitation_codes").update({
+      await supabase.from("invitation_codes").update({
         used_by: authData.user.id,
         used_at: new Date().toISOString(),
       }).eq("id", codeData.id);
