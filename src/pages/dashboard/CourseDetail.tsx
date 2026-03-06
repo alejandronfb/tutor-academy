@@ -340,9 +340,23 @@ export default function CourseDetail() {
                   <ArrowLeft className="mr-1 h-4 w-4" /> Previous
                 </Button>
 
-                <Button variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700">
-                  <CheckCircle className="mr-1 h-4 w-4" /> Mark as Complete
-                </Button>
+                {currentLesson && completedLessonIds.includes(currentLesson.id) ? (
+                  <Button variant="outline" size="sm" disabled className="text-emerald-600 border-emerald-200">
+                    <CheckCircle className="mr-1 h-4 w-4" /> Completed
+                  </Button>
+                ) : (
+                  <Button
+                    variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700"
+                    disabled={markCompleteMutation.isPending}
+                    onClick={() => currentLesson && markCompleteMutation.mutate(currentLesson.id)}
+                  >
+                    {markCompleteMutation.isPending ? (
+                      <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Saving...</>
+                    ) : (
+                      <><CheckCircle className="mr-1 h-4 w-4" /> Mark as Complete</>
+                    )}
+                  </Button>
+                )}
 
                 {/* If last lesson in module and module has quiz, show "Take Quiz" instead of Next */}
                 {activeLesson === currentModule.lessons.length - 1 && currentModule.quiz ? (
