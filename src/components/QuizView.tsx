@@ -1,25 +1,31 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle, XCircle, ArrowRight, RotateCcw, Trophy } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { CheckCircle, XCircle, ArrowRight, RotateCcw, Trophy, Loader2 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 interface QuizViewProps {
   quizId: string;
+  courseId?: string;
   moduleTitle?: string;
   isFinal?: boolean;
   passingScore: number;
   onClose: () => void;
+  onPassed?: (score: number) => void;
 }
 
-export default function QuizView({ quizId, moduleTitle, isFinal, passingScore, onClose }: QuizViewProps) {
+export default function QuizView({ quizId, courseId, moduleTitle, isFinal, passingScore, onClose, onPassed }: QuizViewProps) {
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [submitted, setSubmitted] = useState(false);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: questions, isLoading } = useQuery({
     queryKey: ["quiz-questions", quizId],
@@ -33,6 +39,156 @@ export default function QuizView({ quizId, moduleTitle, isFinal, passingScore, o
       return data;
     },
   });
+
+  const saveAttempt = async (score: number, passed: boolean) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Save quiz attempt
+    await supabase.from("quiz_attempts").insert({
+      quiz_id: quizId,
+      tutor_id: user.id,
+      score,
+      passed,
+    });
+
+    // Award activity points
+    const points = passed ? (isFinal ? 100 : 25) : 10;
+    await supabase.from("activity_points").insert({
+      tutor_id: user.id,
+      points,
+      reason: passed
+        ? (isFinal ? `Passed final exam: ${moduleTitle}` : `Passed module quiz: ${moduleTitle}`)
+        : `Attempted quiz: ${moduleTitle}`,
+    });
+
+    // If passed final exam → handle course completion
+    if (passed && isFinal && courseId) {
+      await handleCourseCompletion(user.id, courseId);
+    }
+
+    // Check for perfect score badge
+    if (score === 100) {
+      await awardBadgeIfNew(user.id, "perfect_score");
+    }
+
+    // Invalidate dashboard queries
+    queryClient.invalidateQueries({ queryKey: ["dashboard-home"] });
+    queryClient.invalidateQueries({ queryKey: ["badges"] });
+    queryClient.invalidateQueries({ queryKey: ["certifications"] });
+  };
+
+  const handleCourseCompletion = async (userId: string, cId: string) => {
+    // Mark course enrollment as completed
+    const { data: enrollment } = await supabase
+      .from("course_enrollments")
+      .select("id")
+      .eq("tutor_id", userId)
+      .eq("course_id", cId)
+      .maybeSingle();
+
+    if (enrollment) {
+      await supabase
+        .from("course_enrollments")
+        .update({ completed_at: new Date().toISOString() })
+        .eq("id", enrollment.id);
+    } else {
+      await supabase.from("course_enrollments").insert({
+        tutor_id: userId,
+        course_id: cId,
+        completed_at: new Date().toISOString(),
+      });
+    }
+
+    // Get course slug for badge mapping
+    const { data: courseData } = await supabase
+      .from("courses")
+      .select("slug, certificate_title, title")
+      .eq("id", cId)
+      .single();
+
+    if (!courseData) return;
+
+    // Award course-specific badge
+    await awardBadgeIfNew(userId, "course_completion", courseData.slug);
+
+    // Check courses_count badges (Bookworm=3, Overachiever=7)
+    const { count } = await supabase
+      .from("course_enrollments")
+      .select("id", { count: "exact", head: true })
+      .eq("tutor_id", userId)
+      .not("completed_at", "is", null);
+
+    if (count && count >= 3) await awardBadgeIfNew(userId, "courses_count", undefined, 3);
+    if (count && count >= 7) await awardBadgeIfNew(userId, "courses_count", undefined, 7);
+
+    // Issue certification
+    if (courseData.certificate_title) {
+      const { data: existingCert } = await supabase
+        .from("certifications")
+        .select("id")
+        .eq("tutor_id", userId)
+        .eq("course_id", cId)
+        .maybeSingle();
+
+      if (!existingCert) {
+        await supabase.from("certifications").insert({
+          tutor_id: userId,
+          course_id: cId,
+          title: courseData.certificate_title,
+        });
+      }
+    }
+
+    toast({
+      title: "🎓 Course Completed!",
+      description: `You've earned your ${courseData.certificate_title || courseData.title} certification!`,
+    });
+  };
+
+  const awardBadgeIfNew = async (userId: string, unlockType: string, courseSlug?: string, count?: number) => {
+    // Find matching badge
+    const { data: badges } = await supabase.from("badges").select("*");
+    if (!badges) return;
+
+    let badge;
+    if (unlockType === "course_completion" && courseSlug) {
+      badge = badges.find((b) => b.unlock_type === "course_completion" && (b.unlock_criteria as any)?.course_slug === courseSlug);
+    } else if (unlockType === "courses_count" && count) {
+      badge = badges.find((b) => b.unlock_type === "courses_count" && (b.unlock_criteria as any)?.count === count);
+    } else if (unlockType === "perfect_score") {
+      badge = badges.find((b) => b.unlock_type === "perfect_score");
+    }
+
+    if (!badge) return;
+
+    // Check if already awarded
+    const { data: existing } = await supabase
+      .from("user_badges")
+      .select("id")
+      .eq("tutor_id", userId)
+      .eq("badge_id", badge.id)
+      .maybeSingle();
+
+    if (!existing) {
+      await supabase.from("user_badges").insert({
+        tutor_id: userId,
+        badge_id: badge.id,
+      });
+
+      // Award bonus points for badge
+      await supabase.from("activity_points").insert({
+        tutor_id: userId,
+        points: 50,
+        reason: `Badge unlocked: ${badge.name}`,
+      });
+
+      toast({
+        title: `🏆 Badge Unlocked: ${badge.name}!`,
+        description: badge.description || "Keep up the great work!",
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -70,12 +226,27 @@ export default function QuizView({ quizId, moduleTitle, isFinal, passingScore, o
     setShowFeedback(true);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     setShowFeedback(false);
     setSelectedOption(null);
     if (currentQ < totalQuestions - 1) {
       setCurrentQ(currentQ + 1);
     } else {
+      // Calculate score and save
+      const finalAnswers = { ...answers, [currentQ]: answers[currentQ] };
+      const correctCount = questions.reduce((c: number, q: any, i: number) => c + (finalAnswers[i] === q.correct_index ? 1 : 0), 0);
+      const scorePercent = Math.round((correctCount / totalQuestions) * 100);
+      const passed = scorePercent >= passingScore;
+
+      setSaving(true);
+      try {
+        await saveAttempt(scorePercent, passed);
+        if (passed && onPassed) onPassed(scorePercent);
+      } catch (err) {
+        console.error("Error saving quiz attempt:", err);
+      } finally {
+        setSaving(false);
+      }
       setSubmitted(true);
     }
   };
@@ -114,6 +285,11 @@ export default function QuizView({ quizId, moduleTitle, isFinal, passingScore, o
             <p className="text-xs text-muted-foreground">Correct</p>
           </div>
         </div>
+        {saving && (
+          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Saving results...
+          </div>
+        )}
         <div className="flex gap-3 justify-center pt-4">
           {!passed && (
             <Button variant="outline" onClick={() => {
@@ -135,7 +311,6 @@ export default function QuizView({ quizId, moduleTitle, isFinal, passingScore, o
   }
 
   const isCorrect = showFeedback && selectedOption === question.correct_index;
-  const isWrong = showFeedback && selectedOption !== question.correct_index;
 
   return (
     <div className="space-y-6">
