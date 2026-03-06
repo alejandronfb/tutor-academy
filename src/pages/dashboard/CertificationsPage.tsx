@@ -1,25 +1,27 @@
-import { Award, ExternalLink } from "lucide-react";
+import { Award, ExternalLink, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import { generateCertificatePdf } from "@/lib/generateCertificatePdf";
 
 export default function CertificationsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["certifications-page"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      // All courses with certificate_title
       const { data: courses } = await supabase.from("courses").select("id, title, icon, certificate_title, slug").not("certificate_title", "is", null).order("sort_order");
-      // User's earned certs
       let earned: any[] = [];
+      let tutorName = "";
       if (user) {
         const { data: certs } = await supabase.from("certifications").select("*, courses(title, icon)").eq("tutor_id", user.id);
         earned = certs || [];
+        const { data: profile } = await supabase.from("tutor_profiles").select("full_name").eq("id", user.id).maybeSingle();
+        tutorName = profile?.full_name || "";
       }
-      return { courses: courses || [], earned, userId: user?.id };
+      return { courses: courses || [], earned, userId: user?.id, tutorName };
     },
   });
 
@@ -34,7 +36,7 @@ export default function CertificationsPage() {
     );
   }
 
-  const { courses, earned } = data!;
+  const { courses, earned, tutorName } = data!;
   const earnedCourseIds = earned.map((c: any) => c.course_id);
 
   return (
@@ -56,12 +58,25 @@ export default function CertificationsPage() {
                 <div className="flex-1">
                   <h3 className="font-medium text-foreground text-sm">{cert.title}</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">Issued {format(new Date(cert.issued_at), "MMM d, yyyy")}</p>
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-3 flex gap-2 flex-wrap">
                     <span className="rounded-full bg-emerald-100 dark:bg-emerald-950/30 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">✓ Earned</span>
                     <Button variant="ghost" size="sm" className="h-6 text-xs" asChild>
                       <Link to={`/verify/${cert.verification_id}`}>
                         <ExternalLink className="h-3 w-3 mr-1" /> Verify
                       </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => generateCertificatePdf({
+                        tutorName,
+                        certTitle: cert.title,
+                        issuedAt: format(new Date(cert.issued_at), "MMMM d, yyyy"),
+                        verificationId: cert.verification_id,
+                      })}
+                    >
+                      <Download className="h-3 w-3 mr-1" /> Download PDF
                     </Button>
                   </div>
                 </div>
