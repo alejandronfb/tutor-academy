@@ -1,11 +1,12 @@
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ArrowRight, Award, CheckCircle, ClipboardList } from "lucide-react";
+import { ArrowLeft, ArrowRight, Award, CheckCircle, ClipboardList, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 import QuizView from "@/components/QuizView";
 
 export default function CourseDetail() {
