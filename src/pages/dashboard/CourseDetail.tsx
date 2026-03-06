@@ -246,9 +246,12 @@ export default function CourseDetail() {
                       <button
                         key={lesson.id}
                         onClick={() => setActiveLesson(li)}
-                        className={`w-full text-left px-3 py-1.5 rounded text-xs transition-colors ${li === activeLesson ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`w-full text-left px-3 py-1.5 rounded text-xs transition-colors flex items-center gap-1.5 ${li === activeLesson ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:text-foreground"}`}
                       >
-                        {lesson.title}
+                        {completedLessonIds.includes(lesson.id) && (
+                          <CheckCircle className="h-3 w-3 text-emerald-500 flex-shrink-0" />
+                        )}
+                        <span>{lesson.title}</span>
                       </button>
                     ))}
                     {mod.quiz && (
