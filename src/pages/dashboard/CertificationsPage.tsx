@@ -12,15 +12,16 @@ export default function CertificationsPage() {
     queryKey: ["certifications-page"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      // All courses with certificate_title
       const { data: courses } = await supabase.from("courses").select("id, title, icon, certificate_title, slug").not("certificate_title", "is", null).order("sort_order");
-      // User's earned certs
       let earned: any[] = [];
+      let tutorName = "";
       if (user) {
         const { data: certs } = await supabase.from("certifications").select("*, courses(title, icon)").eq("tutor_id", user.id);
         earned = certs || [];
+        const { data: profile } = await supabase.from("tutor_profiles").select("full_name").eq("id", user.id).maybeSingle();
+        tutorName = profile?.full_name || "";
       }
-      return { courses: courses || [], earned, userId: user?.id };
+      return { courses: courses || [], earned, userId: user?.id, tutorName };
     },
   });
 
