@@ -279,9 +279,13 @@ export default function CourseDetail() {
                     {mod.quiz && (
                       <button
                         onClick={() => openModuleQuiz(mod)}
-                        className="w-full text-left px-3 py-1.5 rounded text-xs text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20 flex items-center gap-1"
+                        className={`w-full text-left px-3 py-1.5 rounded text-xs flex items-center gap-1 ${passedQuizIds.includes(mod.quiz.id) ? "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20" : "text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20"}`}
                       >
-                        <ClipboardList className="h-3 w-3" /> Module Quiz
+                        {passedQuizIds.includes(mod.quiz.id) ? (
+                          <><CheckCircle className="h-3 w-3" /> Quiz Passed</>
+                        ) : (
+                          <><ClipboardList className="h-3 w-3" /> Module Quiz</>
+                        )}
                       </button>
                     )}
                   </div>
