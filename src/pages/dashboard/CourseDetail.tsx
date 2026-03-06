@@ -51,6 +51,108 @@ export default function CourseDetail() {
     enabled: !!courseId,
   });
 
+  // Fetch user's lesson completions for this course
+  const { data: completedLessonIds = [] } = useQuery({
+    queryKey: ["lesson-completions", course?.id],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !course) return [];
+      const allLessonIds = course.modules.flatMap((m: any) => m.lessons.map((l: any) => l.id));
+      if (allLessonIds.length === 0) return [];
+      const { data } = await supabase
+        .from("lesson_completions")
+        .select("lesson_id")
+        .eq("tutor_id", user.id)
+        .in("lesson_id", allLessonIds);
+      return (data || []).map((d) => d.lesson_id);
+    },
+    enabled: !!course,
+  });
+
+  const markCompleteMutation = useMutation({
+    mutationFn: async (lessonId: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Check if already completed
+      const { data: existing } = await supabase
+        .from("lesson_completions")
+        .select("id")
+        .eq("tutor_id", user.id)
+        .eq("lesson_id", lessonId)
+        .maybeSingle();
+      if (existing) return { alreadyCompleted: true };
+
+      // Insert completion
+      await supabase.from("lesson_completions").insert({
+        tutor_id: user.id,
+        lesson_id: lessonId,
+      });
+
+      // Award 10 activity points
+      await supabase.from("activity_points").insert({
+        tutor_id: user.id,
+        points: 10,
+        reason: `Completed lesson: ${currentLesson?.title || "Lesson"}`,
+      });
+
+      // Update streak
+      const today = new Date().toISOString().split("T")[0];
+      const { data: profile } = await supabase
+        .from("tutor_profiles")
+        .select("last_activity_date, learning_streak")
+        .eq("id", user.id)
+        .single();
+
+      if (profile) {
+        const lastDate = profile.last_activity_date;
+        const streak = profile.learning_streak || 0;
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+
+        let newStreak = 1;
+        if (lastDate === today) {
+          newStreak = streak; // already active today
+        } else if (lastDate === yesterday) {
+          newStreak = streak + 1;
+        }
+
+        await supabase
+          .from("tutor_profiles")
+          .update({ last_activity_date: today, learning_streak: newStreak })
+          .eq("id", user.id);
+
+        // Check 7-day streak badge
+        if (newStreak >= 7) {
+          const { data: badges } = await supabase.from("badges").select("*");
+          const weekBadge = badges?.find((b) => b.unlock_type === "streak" && (b.unlock_criteria as any)?.days === 7);
+          if (weekBadge) {
+            const { data: existing } = await supabase
+              .from("user_badges")
+              .select("id")
+              .eq("tutor_id", user.id)
+              .eq("badge_id", weekBadge.id)
+              .maybeSingle();
+            if (!existing) {
+              await supabase.from("user_badges").insert({ tutor_id: user.id, badge_id: weekBadge.id });
+              await supabase.from("activity_points").insert({ tutor_id: user.id, points: 50, reason: `Badge unlocked: ${weekBadge.name}` });
+              toast({ title: `🏆 Badge Unlocked: ${weekBadge.name}!`, description: weekBadge.description || "Keep it up!" });
+            }
+          }
+        }
+      }
+
+      return { alreadyCompleted: false };
+    },
+    onSuccess: (result) => {
+      if (!result?.alreadyCompleted) {
+        toast({ title: "✅ Lesson Complete!", description: "+10 activity points earned" });
+      }
+      queryClient.invalidateQueries({ queryKey: ["lesson-completions"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-home"] });
+      queryClient.invalidateQueries({ queryKey: ["badges"] });
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="animate-fade-in">
