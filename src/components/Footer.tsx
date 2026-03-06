@@ -23,8 +23,8 @@ export function Footer() {
           <div>
             <h4 className="font-semibold text-primary-foreground mb-3 text-sm">Platform</h4>
             <div className="flex flex-col gap-2">
-              <Link to="/courses" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">Courses</Link>
-              <Link to="/pathways" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">Learning Paths</Link>
+              <Link to="/dashboard/courses" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">Courses</Link>
+              <Link to="/dashboard/pathways" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">Learning Paths</Link>
               <Link to="/register" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">Get Started</Link>
             </div>
           </div>

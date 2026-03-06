@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { GraduationCap, BookOpen, Award, ArrowRight, Users, CheckCircle, Sparkles } from "lucide-react";
 import { PATHWAYS } from "@/lib/constants";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import heroBg from "@/assets/hero-bg.jpg";
 
 const STEPS = [
@@ -13,6 +15,22 @@ const STEPS = [
 ];
 
 const Index = () => {
+  const { data: stats } = useQuery({
+    queryKey: ["homepage-stats"],
+    queryFn: async () => {
+      const [tutors, certs, courses] = await Promise.all([
+        supabase.from("tutor_profiles").select("id", { count: "exact", head: true }),
+        supabase.from("certifications").select("id", { count: "exact", head: true }),
+        supabase.from("courses").select("id", { count: "exact", head: true }),
+      ]);
+      return {
+        tutors: tutors.count ?? 0,
+        certs: certs.count ?? 0,
+        courses: courses.count ?? 0,
+      };
+    },
+  });
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
@@ -42,7 +60,7 @@ const Index = () => {
                 </Link>
               </Button>
               <Button variant="hero-outline" size="lg" asChild>
-                <Link to="/courses">Explore Courses</Link>
+                <Link to="/dashboard/courses">Explore Courses</Link>
               </Button>
             </div>
           </div>
@@ -92,7 +110,7 @@ const Index = () => {
                 <h3 className="mb-2 text-lg font-semibold text-foreground">{path.name}</h3>
                 <p className="text-sm text-muted-foreground mb-4">{path.description}</p>
                 <Link
-                  to="/pathways"
+                  to="/dashboard/pathways"
                   className="inline-flex items-center text-sm font-medium text-primary hover:text-primary/80 transition-colors"
                 >
                   View Path <ArrowRight className="ml-1 h-3 w-3" />
@@ -130,23 +148,25 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="gradient-navy py-16">
-        <div className="container">
-          <div className="grid gap-8 md:grid-cols-3 text-center">
-            {[
-              { value: "500+", label: "Tutors Trained" },
-              { value: "1,200+", label: "Certificates Issued" },
-              { value: "7", label: "Professional Courses" },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <div className="text-4xl font-extrabold text-accent mb-1">{stat.value}</div>
-                <div className="text-sm text-primary-foreground/60">{stat.label}</div>
-              </div>
-            ))}
+      {/* Stats — only show if 10+ tutors */}
+      {stats && stats.tutors >= 10 && (
+        <section className="gradient-navy py-16">
+          <div className="container">
+            <div className="grid gap-8 md:grid-cols-3 text-center">
+              {[
+                { value: stats.tutors, label: "Tutors Trained" },
+                { value: stats.certs, label: "Certificates Issued" },
+                { value: stats.courses, label: "Professional Courses" },
+              ].map((stat) => (
+                <div key={stat.label}>
+                  <div className="text-4xl font-extrabold text-accent mb-1">{stat.value}</div>
+                  <div className="text-sm text-primary-foreground/60">{stat.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* CTA */}
       <section className="container py-20 text-center">

@@ -15,8 +15,9 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { NavLink } from "@/components/NavLink";
-import { GraduationCap, LayoutDashboard, BookOpen, Route, Award, Trophy, User, Briefcase, LogOut, Bell, FlaskConical } from "lucide-react";
+import { GraduationCap, LayoutDashboard, BookOpen, Route, Award, Trophy, User, Briefcase, LogOut, FlaskConical, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/NotificationBell";
 
 const NAV_ITEMS = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -33,6 +34,17 @@ function AppSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+        setIsAdmin(!!data);
+      }
+    })();
+  }, []);
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
@@ -63,6 +75,16 @@ function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink to="/admin" className="hover:bg-sidebar-accent/50 text-amber-600 dark:text-amber-400" activeClassName="bg-sidebar-accent font-medium">
+                      <Shield className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>Admin</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -87,9 +109,7 @@ export default function DashboardLayout() {
           <header className="h-14 flex items-center justify-between border-b px-4 bg-card">
             <SidebarTrigger className="ml-0" />
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon">
-                <Bell className="h-4 w-4" />
-              </Button>
+              <NotificationBell />
               <Button variant="ghost" size="sm" onClick={handleLogout}>
                 <LogOut className="mr-1 h-4 w-4" /> Sign Out
               </Button>
