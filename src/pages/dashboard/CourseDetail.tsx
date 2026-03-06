@@ -14,6 +14,8 @@ export default function CourseDetail() {
   const [activeModule, setActiveModule] = useState(0);
   const [activeLesson, setActiveLesson] = useState(0);
   const [showQuiz, setShowQuiz] = useState<{ quizId: string; moduleTitle?: string; isFinal: boolean; passingScore: number } | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: course, isLoading } = useQuery({
     queryKey: ["course", courseId],
