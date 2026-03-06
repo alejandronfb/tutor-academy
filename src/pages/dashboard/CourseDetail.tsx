@@ -1,11 +1,12 @@
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ArrowRight, Award, CheckCircle, ClipboardList } from "lucide-react";
+import { ArrowLeft, ArrowRight, Award, CheckCircle, ClipboardList, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 import QuizView from "@/components/QuizView";
 
 export default function CourseDetail() {
@@ -13,6 +14,8 @@ export default function CourseDetail() {
   const [activeModule, setActiveModule] = useState(0);
   const [activeLesson, setActiveLesson] = useState(0);
   const [showQuiz, setShowQuiz] = useState<{ quizId: string; moduleTitle?: string; isFinal: boolean; passingScore: number } | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: course, isLoading } = useQuery({
     queryKey: ["course", courseId],
@@ -46,6 +49,108 @@ export default function CourseDetail() {
       return { ...courseData, modules: modulesWithLessons, finalQuiz };
     },
     enabled: !!courseId,
+  });
+
+  // Fetch user's lesson completions for this course
+  const { data: completedLessonIds = [] } = useQuery({
+    queryKey: ["lesson-completions", course?.id],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !course) return [];
+      const allLessonIds = course.modules.flatMap((m: any) => m.lessons.map((l: any) => l.id));
+      if (allLessonIds.length === 0) return [];
+      const { data } = await supabase
+        .from("lesson_completions")
+        .select("lesson_id")
+        .eq("tutor_id", user.id)
+        .in("lesson_id", allLessonIds);
+      return (data || []).map((d) => d.lesson_id);
+    },
+    enabled: !!course,
+  });
+
+  const markCompleteMutation = useMutation({
+    mutationFn: async (lessonId: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Check if already completed
+      const { data: existing } = await supabase
+        .from("lesson_completions")
+        .select("id")
+        .eq("tutor_id", user.id)
+        .eq("lesson_id", lessonId)
+        .maybeSingle();
+      if (existing) return { alreadyCompleted: true };
+
+      // Insert completion
+      await supabase.from("lesson_completions").insert({
+        tutor_id: user.id,
+        lesson_id: lessonId,
+      });
+
+      // Award 10 activity points
+      await supabase.from("activity_points").insert({
+        tutor_id: user.id,
+        points: 10,
+        reason: `Completed lesson: ${currentLesson?.title || "Lesson"}`,
+      });
+
+      // Update streak
+      const today = new Date().toISOString().split("T")[0];
+      const { data: profile } = await supabase
+        .from("tutor_profiles")
+        .select("last_activity_date, learning_streak")
+        .eq("id", user.id)
+        .single();
+
+      if (profile) {
+        const lastDate = profile.last_activity_date;
+        const streak = profile.learning_streak || 0;
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+
+        let newStreak = 1;
+        if (lastDate === today) {
+          newStreak = streak; // already active today
+        } else if (lastDate === yesterday) {
+          newStreak = streak + 1;
+        }
+
+        await supabase
+          .from("tutor_profiles")
+          .update({ last_activity_date: today, learning_streak: newStreak })
+          .eq("id", user.id);
+
+        // Check 7-day streak badge
+        if (newStreak >= 7) {
+          const { data: badges } = await supabase.from("badges").select("*");
+          const weekBadge = badges?.find((b) => b.unlock_type === "streak" && (b.unlock_criteria as any)?.days === 7);
+          if (weekBadge) {
+            const { data: existing } = await supabase
+              .from("user_badges")
+              .select("id")
+              .eq("tutor_id", user.id)
+              .eq("badge_id", weekBadge.id)
+              .maybeSingle();
+            if (!existing) {
+              await supabase.from("user_badges").insert({ tutor_id: user.id, badge_id: weekBadge.id });
+              await supabase.from("activity_points").insert({ tutor_id: user.id, points: 50, reason: `Badge unlocked: ${weekBadge.name}` });
+              toast({ title: `🏆 Badge Unlocked: ${weekBadge.name}!`, description: weekBadge.description || "Keep it up!" });
+            }
+          }
+        }
+      }
+
+      return { alreadyCompleted: false };
+    },
+    onSuccess: (result) => {
+      if (!result?.alreadyCompleted) {
+        toast({ title: "✅ Lesson Complete!", description: "+10 activity points earned" });
+      }
+      queryClient.invalidateQueries({ queryKey: ["lesson-completions"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-home"] });
+      queryClient.invalidateQueries({ queryKey: ["badges"] });
+    },
   });
 
   if (isLoading) {
@@ -141,9 +246,12 @@ export default function CourseDetail() {
                       <button
                         key={lesson.id}
                         onClick={() => setActiveLesson(li)}
-                        className={`w-full text-left px-3 py-1.5 rounded text-xs transition-colors ${li === activeLesson ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`w-full text-left px-3 py-1.5 rounded text-xs transition-colors flex items-center gap-1.5 ${li === activeLesson ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:text-foreground"}`}
                       >
-                        {lesson.title}
+                        {completedLessonIds.includes(lesson.id) && (
+                          <CheckCircle className="h-3 w-3 text-emerald-500 flex-shrink-0" />
+                        )}
+                        <span>{lesson.title}</span>
                       </button>
                     ))}
                     {mod.quiz && (
@@ -232,9 +340,23 @@ export default function CourseDetail() {
                   <ArrowLeft className="mr-1 h-4 w-4" /> Previous
                 </Button>
 
-                <Button variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700">
-                  <CheckCircle className="mr-1 h-4 w-4" /> Mark as Complete
-                </Button>
+                {currentLesson && completedLessonIds.includes(currentLesson.id) ? (
+                  <Button variant="outline" size="sm" disabled className="text-emerald-600 border-emerald-200">
+                    <CheckCircle className="mr-1 h-4 w-4" /> Completed
+                  </Button>
+                ) : (
+                  <Button
+                    variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700"
+                    disabled={markCompleteMutation.isPending}
+                    onClick={() => currentLesson && markCompleteMutation.mutate(currentLesson.id)}
+                  >
+                    {markCompleteMutation.isPending ? (
+                      <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Saving...</>
+                    ) : (
+                      <><CheckCircle className="mr-1 h-4 w-4" /> Mark as Complete</>
+                    )}
+                  </Button>
+                )}
 
                 {/* If last lesson in module and module has quiz, show "Take Quiz" instead of Next */}
                 {activeLesson === currentModule.lessons.length - 1 && currentModule.quiz ? (
