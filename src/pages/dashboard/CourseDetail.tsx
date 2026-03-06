@@ -306,8 +306,8 @@ export default function CourseDetail() {
           ) : (
             <>
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs text-muted-foreground">Lesson {lessonNumber} of {totalLessons}</span>
-                <Progress value={(lessonNumber / totalLessons) * 100} className="w-32 h-2" />
+                <span className="text-xs text-muted-foreground">{completedLessonIds.length}/{totalLessons} lessons completed</span>
+                <Progress value={(completedLessonIds.length / totalLessons) * 100} className="w-32 h-2" />
               </div>
 
               {currentLesson && (
