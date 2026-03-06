@@ -1,52 +1,49 @@
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ArrowRight, BookOpen, Clock, Award, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Award, CheckCircle, ClipboardList } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import QuizView from "@/components/QuizView";
 
 export default function CourseDetail() {
   const { courseId } = useParams();
   const [activeModule, setActiveModule] = useState(0);
   const [activeLesson, setActiveLesson] = useState(0);
+  const [showQuiz, setShowQuiz] = useState<{ quizId: string; moduleTitle?: string; isFinal: boolean; passingScore: number } | null>(null);
 
   const { data: course, isLoading } = useQuery({
     queryKey: ["course", courseId],
     queryFn: async () => {
-      // Fetch course by slug
       const { data: courseData, error: courseErr } = await supabase
-        .from("courses")
-        .select("*")
-        .eq("slug", courseId!)
-        .single();
+        .from("courses").select("*").eq("slug", courseId!).single();
       if (courseErr) throw courseErr;
 
-      // Fetch modules
       const { data: modules, error: modErr } = await supabase
-        .from("course_modules")
-        .select("*")
-        .eq("course_id", courseData.id)
-        .order("sort_order");
+        .from("course_modules").select("*").eq("course_id", courseData.id).order("sort_order");
       if (modErr) throw modErr;
 
-      // Fetch all lessons for these modules
       const moduleIds = modules.map((m) => m.id);
       const { data: lessons, error: lesErr } = await supabase
-        .from("lessons")
-        .select("*")
-        .in("module_id", moduleIds)
-        .order("sort_order");
+        .from("lessons").select("*").in("module_id", moduleIds).order("sort_order");
       if (lesErr) throw lesErr;
 
-      // Group lessons by module
+      // Fetch quizzes for this course
+      const { data: quizzes, error: quizErr } = await supabase
+        .from("quizzes").select("*").eq("course_id", courseData.id);
+      if (quizErr) throw quizErr;
+
       const modulesWithLessons = modules.map((mod) => ({
         ...mod,
         lessons: lessons.filter((l) => l.module_id === mod.id),
+        quiz: quizzes.find((q) => q.module_id === mod.id),
       }));
 
-      return { ...courseData, modules: modulesWithLessons };
+      const finalQuiz = quizzes.find((q) => q.is_final);
+
+      return { ...courseData, modules: modulesWithLessons, finalQuiz };
     },
     enabled: !!courseId,
   });
@@ -58,7 +55,6 @@ export default function CourseDetail() {
         <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
           <div className="rounded-xl border bg-card p-4 shadow-card space-y-3">
             <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-6 w-full" />
             <Skeleton className="h-6 w-full" />
             <Skeleton className="h-6 w-full" />
           </div>
@@ -90,9 +86,30 @@ export default function CourseDetail() {
   for (let i = 0; i < activeModule; i++) lessonNumber += course.modules[i].lessons.length;
   lessonNumber += activeLesson + 1;
 
+  const openModuleQuiz = (mod: any) => {
+    if (mod.quiz) {
+      setShowQuiz({
+        quizId: mod.quiz.id,
+        moduleTitle: mod.title,
+        isFinal: false,
+        passingScore: mod.quiz.passing_score ?? 70,
+      });
+    }
+  };
+
+  const openFinalExam = () => {
+    if (course.finalQuiz) {
+      setShowQuiz({
+        quizId: course.finalQuiz.id,
+        moduleTitle: course.title,
+        isFinal: true,
+        passingScore: course.finalQuiz.passing_score ?? 80,
+      });
+    }
+  };
+
   return (
     <div className="animate-fade-in">
-      {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <Button variant="ghost" size="sm" asChild>
           <Link to="/dashboard/courses"><ArrowLeft className="mr-1 h-4 w-4" /> All Courses</Link>
@@ -100,7 +117,7 @@ export default function CourseDetail() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-        {/* Sidebar - Module list */}
+        {/* Sidebar */}
         <div className="rounded-xl border bg-card p-4 shadow-card h-fit">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-2xl">{course.icon || "📚"}</span>
@@ -113,12 +130,12 @@ export default function CourseDetail() {
             {course.modules.map((mod: any, mi: number) => (
               <div key={mod.id}>
                 <button
-                  onClick={() => { setActiveModule(mi); setActiveLesson(0); }}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${mi === activeModule ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                  onClick={() => { setActiveModule(mi); setActiveLesson(0); setShowQuiz(null); }}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${mi === activeModule && !showQuiz ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
                 >
                   Module {mi + 1}: {mod.title}
                 </button>
-                {mi === activeModule && (
+                {mi === activeModule && !showQuiz && (
                   <div className="ml-4 space-y-0.5 mt-1">
                     {mod.lessons.map((lesson: any, li: number) => (
                       <button
@@ -129,14 +146,35 @@ export default function CourseDetail() {
                         {lesson.title}
                       </button>
                     ))}
+                    {mod.quiz && (
+                      <button
+                        onClick={() => openModuleQuiz(mod)}
+                        className="w-full text-left px-3 py-1.5 rounded text-xs text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20 flex items-center gap-1"
+                      >
+                        <ClipboardList className="h-3 w-3" /> Module Quiz
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
             ))}
           </div>
 
+          {/* Final Exam button */}
+          {course.finalQuiz && (
+            <button
+              onClick={openFinalExam}
+              className={`w-full mt-3 p-3 rounded-lg border text-left transition-colors ${showQuiz?.isFinal ? "bg-primary/10 border-primary/30" : "border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/20"}`}
+            >
+              <div className="flex items-center gap-2">
+                <ClipboardList className="h-4 w-4 text-amber-600" />
+                <span className="text-xs font-medium text-amber-600">Final Exam</span>
+              </div>
+            </button>
+          )}
+
           {course.certificate_title && (
-            <div className="mt-4 p-3 rounded-lg bg-accent/10 border border-accent/20">
+            <div className="mt-3 p-3 rounded-lg bg-accent/10 border border-accent/20">
               <div className="flex items-center gap-2">
                 <Award className="h-4 w-4 text-accent" />
                 <span className="text-xs font-medium text-accent">Certificate</span>
@@ -148,60 +186,78 @@ export default function CourseDetail() {
 
         {/* Content area */}
         <div className="rounded-xl border bg-card p-6 md:p-8 shadow-card">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-xs text-muted-foreground">Lesson {lessonNumber} of {totalLessons}</span>
-            <Progress value={(lessonNumber / totalLessons) * 100} className="w-32 h-2" />
-          </div>
+          {showQuiz ? (
+            <QuizView
+              quizId={showQuiz.quizId}
+              moduleTitle={showQuiz.moduleTitle}
+              isFinal={showQuiz.isFinal}
+              passingScore={showQuiz.passingScore}
+              onClose={() => setShowQuiz(null)}
+            />
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs text-muted-foreground">Lesson {lessonNumber} of {totalLessons}</span>
+                <Progress value={(lessonNumber / totalLessons) * 100} className="w-32 h-2" />
+              </div>
 
-          {currentLesson && (
-            <div className="prose prose-sm max-w-none">
-              {currentLesson.content.split("\n").map((line: string, i: number) => {
-                if (line.startsWith("# ")) return <h1 key={i} className="text-2xl font-bold text-foreground mb-4">{line.slice(2)}</h1>;
-                if (line.startsWith("## ")) return <h2 key={i} className="text-xl font-semibold text-foreground mt-6 mb-3">{line.slice(3)}</h2>;
-                if (line.startsWith("### ")) return <h3 key={i} className="text-lg font-semibold text-foreground mt-4 mb-2">{line.slice(4)}</h3>;
-                if (line.startsWith("- ")) return <li key={i} className="text-sm text-muted-foreground ml-4">{line.slice(2)}</li>;
-                if (line.startsWith("**") && line.endsWith("**")) return <p key={i} className="text-sm font-semibold text-foreground mt-2">{line.slice(2, -2)}</p>;
-                if (line.trim() === "") return <br key={i} />;
-                return <p key={i} className="text-sm text-muted-foreground leading-relaxed">{line}</p>;
-              })}
-            </div>
+              {currentLesson && (
+                <div className="prose prose-sm max-w-none">
+                  {currentLesson.content.split("\n").map((line: string, i: number) => {
+                    if (line.startsWith("# ")) return <h1 key={i} className="text-2xl font-bold text-foreground mb-4">{line.slice(2)}</h1>;
+                    if (line.startsWith("## ")) return <h2 key={i} className="text-xl font-semibold text-foreground mt-6 mb-3">{line.slice(3)}</h2>;
+                    if (line.startsWith("### ")) return <h3 key={i} className="text-lg font-semibold text-foreground mt-4 mb-2">{line.slice(4)}</h3>;
+                    if (line.startsWith("- ")) return <li key={i} className="text-sm text-muted-foreground ml-4">{line.slice(2)}</li>;
+                    if (line.startsWith("**") && line.endsWith("**")) return <p key={i} className="text-sm font-semibold text-foreground mt-2">{line.slice(2, -2)}</p>;
+                    if (line.trim() === "") return <br key={i} />;
+                    return <p key={i} className="text-sm text-muted-foreground leading-relaxed">{line}</p>;
+                  })}
+                </div>
+              )}
+
+              {/* Navigation */}
+              <div className="flex items-center justify-between mt-8 pt-6 border-t">
+                <Button
+                  variant="outline" size="sm"
+                  disabled={activeModule === 0 && activeLesson === 0}
+                  onClick={() => {
+                    if (activeLesson > 0) setActiveLesson(activeLesson - 1);
+                    else if (activeModule > 0) {
+                      setActiveModule(activeModule - 1);
+                      setActiveLesson(course.modules[activeModule - 1].lessons.length - 1);
+                    }
+                  }}
+                >
+                  <ArrowLeft className="mr-1 h-4 w-4" /> Previous
+                </Button>
+
+                <Button variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+                  <CheckCircle className="mr-1 h-4 w-4" /> Mark as Complete
+                </Button>
+
+                {/* If last lesson in module and module has quiz, show "Take Quiz" instead of Next */}
+                {activeLesson === currentModule.lessons.length - 1 && currentModule.quiz ? (
+                  <Button size="sm" onClick={() => openModuleQuiz(currentModule)} className="bg-amber-600 hover:bg-amber-700">
+                    <ClipboardList className="mr-1 h-4 w-4" /> Take Quiz
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    disabled={activeModule === course.modules.length - 1 && activeLesson === currentModule.lessons.length - 1}
+                    onClick={() => {
+                      if (activeLesson < currentModule.lessons.length - 1) setActiveLesson(activeLesson + 1);
+                      else if (activeModule < course.modules.length - 1) {
+                        setActiveModule(activeModule + 1);
+                        setActiveLesson(0);
+                      }
+                    }}
+                  >
+                    Next <ArrowRight className="ml-1 h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </>
           )}
-
-          {/* Navigation */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={activeModule === 0 && activeLesson === 0}
-              onClick={() => {
-                if (activeLesson > 0) setActiveLesson(activeLesson - 1);
-                else if (activeModule > 0) {
-                  setActiveModule(activeModule - 1);
-                  setActiveLesson(course.modules[activeModule - 1].lessons.length - 1);
-                }
-              }}
-            >
-              <ArrowLeft className="mr-1 h-4 w-4" /> Previous
-            </Button>
-
-            <Button variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700">
-              <CheckCircle className="mr-1 h-4 w-4" /> Mark as Complete
-            </Button>
-
-            <Button
-              size="sm"
-              disabled={activeModule === course.modules.length - 1 && activeLesson === currentModule.lessons.length - 1}
-              onClick={() => {
-                if (activeLesson < currentModule.lessons.length - 1) setActiveLesson(activeLesson + 1);
-                else if (activeModule < course.modules.length - 1) {
-                  setActiveModule(activeModule + 1);
-                  setActiveLesson(0);
-                }
-              }}
-            >
-              Next <ArrowRight className="ml-1 h-4 w-4" />
-            </Button>
-          </div>
         </div>
       </div>
     </div>
