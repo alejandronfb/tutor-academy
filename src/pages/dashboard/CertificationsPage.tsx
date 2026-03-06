@@ -36,7 +36,7 @@ export default function CertificationsPage() {
     );
   }
 
-  const { courses, earned } = data!;
+  const { courses, earned, tutorName } = data!;
   const earnedCourseIds = earned.map((c: any) => c.course_id);
 
   return (
