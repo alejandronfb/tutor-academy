@@ -1,4 +1,4 @@
-import { Award, ExternalLink, Download } from "lucide-react";
+import { Award, ExternalLink, Download, Linkedin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -77,6 +77,17 @@ export default function CertificationsPage() {
                       })}
                     >
                       <Download className="h-3 w-3 mr-1" /> Download PDF
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => {
+                        const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`${window.location.origin}/verify/${cert.verification_id}`)}`;
+                        window.open(url, "_blank", "noopener,noreferrer,width=600,height=500");
+                      }}
+                    >
+                      <Linkedin className="h-3 w-3 mr-1" /> LinkedIn
                     </Button>
                   </div>
                 </div>
