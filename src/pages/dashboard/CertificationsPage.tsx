@@ -58,12 +58,25 @@ export default function CertificationsPage() {
                 <div className="flex-1">
                   <h3 className="font-medium text-foreground text-sm">{cert.title}</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">Issued {format(new Date(cert.issued_at), "MMM d, yyyy")}</p>
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-3 flex gap-2 flex-wrap">
                     <span className="rounded-full bg-emerald-100 dark:bg-emerald-950/30 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">✓ Earned</span>
                     <Button variant="ghost" size="sm" className="h-6 text-xs" asChild>
                       <Link to={`/verify/${cert.verification_id}`}>
                         <ExternalLink className="h-3 w-3 mr-1" /> Verify
                       </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => generateCertificatePdf({
+                        tutorName,
+                        certTitle: cert.title,
+                        issuedAt: format(new Date(cert.issued_at), "MMMM d, yyyy"),
+                        verificationId: cert.verification_id,
+                      })}
+                    >
+                      <Download className="h-3 w-3 mr-1" /> Download PDF
                     </Button>
                   </div>
                 </div>
