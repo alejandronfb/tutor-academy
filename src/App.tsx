@@ -20,6 +20,14 @@ import ProfilePage from "./pages/dashboard/ProfilePage";
 import TutorPublicProfile from "./pages/TutorPublicProfile";
 import VerifyCertificate from "./pages/VerifyCertificate";
 import NotFound from "./pages/NotFound";
+import AdminLayout from "./components/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminTutors from "./pages/admin/AdminTutors";
+import AdminCourses from "./pages/admin/AdminCourses";
+import AdminCodes from "./pages/admin/AdminCodes";
+import AdminOpportunities from "./pages/admin/AdminOpportunities";
+import AdminBadges from "./pages/admin/AdminBadges";
+import AdminCertifications from "./pages/admin/AdminCertifications";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +52,15 @@ const App = () => (
             <Route path="opportunities" element={<OpportunitiesPage />} />
             <Route path="proficiency" element={<ProficiencyPage />} />
             <Route path="profile" element={<ProfilePage />} />
+          </Route>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="tutors" element={<AdminTutors />} />
+            <Route path="courses" element={<AdminCourses />} />
+            <Route path="codes" element={<AdminCodes />} />
+            <Route path="opportunities" element={<AdminOpportunities />} />
+            <Route path="badges" element={<AdminBadges />} />
+            <Route path="certifications" element={<AdminCertifications />} />
           </Route>
           <Route path="/tutor/:id" element={<TutorPublicProfile />} />
           <Route path="/verify/:id" element={<VerifyCertificate />} />
