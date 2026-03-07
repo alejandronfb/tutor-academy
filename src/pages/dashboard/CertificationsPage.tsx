@@ -74,6 +74,7 @@ export default function CertificationsPage() {
                         certTitle: cert.title,
                         issuedAt: format(new Date(cert.issued_at), "MMMM d, yyyy"),
                         verificationId: cert.verification_id,
+                        template: (cert as any).certificate_template || "classic",
                       })}
                     >
                       <Download className="h-3 w-3 mr-1" /> Download PDF
