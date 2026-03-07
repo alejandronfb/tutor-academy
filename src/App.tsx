@@ -28,6 +28,10 @@ import AdminCodes from "./pages/admin/AdminCodes";
 import AdminOpportunities from "./pages/admin/AdminOpportunities";
 import AdminBadges from "./pages/admin/AdminBadges";
 import AdminCertifications from "./pages/admin/AdminCertifications";
+import CreatorLayout from "./components/CreatorLayout";
+import CreatorDashboard from "./pages/creator/CreatorDashboard";
+import CreatorCourses from "./pages/creator/CreatorCourses";
+import CreatorCourseEdit from "./pages/creator/CreatorCourseEdit";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +65,11 @@ const App = () => (
             <Route path="opportunities" element={<AdminOpportunities />} />
             <Route path="badges" element={<AdminBadges />} />
             <Route path="certifications" element={<AdminCertifications />} />
+          </Route>
+          <Route path="/creator" element={<CreatorLayout />}>
+            <Route index element={<CreatorDashboard />} />
+            <Route path="courses" element={<CreatorCourses />} />
+            <Route path="courses/:id" element={<CreatorCourseEdit />} />
           </Route>
           <Route path="/tutor/:id" element={<TutorPublicProfile />} />
           <Route path="/verify/:id" element={<VerifyCertificate />} />
