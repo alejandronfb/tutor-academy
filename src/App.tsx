@@ -28,7 +28,7 @@ import AdminCourses from "./pages/admin/AdminCourses";
 import AdminCodes from "./pages/admin/AdminCodes";
 import AdminOpportunities from "./pages/admin/AdminOpportunities";
 import AdminBadges from "./pages/admin/AdminBadges";
-import AdminCertifications from "./pages/admin/AdminCertifications";
+import AdminActivity from "./pages/admin/AdminActivity";
 import CreatorLayout from "./components/CreatorLayout";
 import CreatorDashboard from "./pages/creator/CreatorDashboard";
 import CreatorCourses from "./pages/creator/CreatorCourses";
@@ -67,6 +67,7 @@ const App = () => (
             <Route path="opportunities" element={<AdminOpportunities />} />
             <Route path="badges" element={<AdminBadges />} />
             <Route path="certifications" element={<AdminCertifications />} />
+            <Route path="activity" element={<AdminActivity />} />
           </Route>
           <Route path="/creator" element={<CreatorLayout />}>
             <Route index element={<CreatorDashboard />} />

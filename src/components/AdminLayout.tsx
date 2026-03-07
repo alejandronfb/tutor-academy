@@ -24,6 +24,7 @@ const ADMIN_NAV = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Tutors", url: "/admin/tutors", icon: Users },
   { title: "Courses", url: "/admin/courses", icon: BookOpen },
+  { title: "Tutor Activity", url: "/admin/activity", icon: Briefcase },
   { title: "Invitation Codes", url: "/admin/codes", icon: KeyRound },
   { title: "Opportunities", url: "/admin/opportunities", icon: Briefcase },
   { title: "Badges", url: "/admin/badges", icon: Trophy },
