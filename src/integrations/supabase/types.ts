@@ -92,24 +92,30 @@ export type Database = {
       certifications: {
         Row: {
           course_id: string
+          expires_at: string | null
           id: string
           issued_at: string | null
+          renewed_at: string | null
           title: string
           tutor_id: string
           verification_id: string
         }
         Insert: {
           course_id: string
+          expires_at?: string | null
           id?: string
           issued_at?: string | null
+          renewed_at?: string | null
           title: string
           tutor_id: string
           verification_id?: string
         }
         Update: {
           course_id?: string
+          expires_at?: string | null
           id?: string
           issued_at?: string | null
+          renewed_at?: string | null
           title?: string
           tutor_id?: string
           verification_id?: string
@@ -160,18 +166,21 @@ export type Database = {
         Row: {
           course_id: string | null
           id: string
+          release_at: string | null
           sort_order: number | null
           title: string
         }
         Insert: {
           course_id?: string | null
           id?: string
+          release_at?: string | null
           sort_order?: number | null
           title: string
         }
         Update: {
           course_id?: string | null
           id?: string
+          release_at?: string | null
           sort_order?: number | null
           title?: string
         }
@@ -189,6 +198,8 @@ export type Database = {
         Row: {
           certificate_template: string | null
           certificate_title: string | null
+          certification_type: string | null
+          certification_validity_months: number | null
           created_at: string | null
           created_by: string | null
           description: string | null
@@ -197,6 +208,7 @@ export type Database = {
           icon: string | null
           id: string
           pathway: string
+          release_at: string | null
           slug: string
           sort_order: number | null
           status: string | null
@@ -205,6 +217,8 @@ export type Database = {
         Insert: {
           certificate_template?: string | null
           certificate_title?: string | null
+          certification_type?: string | null
+          certification_validity_months?: number | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -213,6 +227,7 @@ export type Database = {
           icon?: string | null
           id?: string
           pathway: string
+          release_at?: string | null
           slug: string
           sort_order?: number | null
           status?: string | null
@@ -221,6 +236,8 @@ export type Database = {
         Update: {
           certificate_template?: string | null
           certificate_title?: string | null
+          certification_type?: string | null
+          certification_validity_months?: number | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -229,6 +246,7 @@ export type Database = {
           icon?: string | null
           id?: string
           pathway?: string
+          release_at?: string | null
           slug?: string
           sort_order?: number | null
           status?: string | null
@@ -600,6 +618,66 @@ export type Database = {
           },
         ]
       }
+      specialization_prerequisites: {
+        Row: {
+          course_id: string
+          id: string
+          prerequisite_course_id: string
+        }
+        Insert: {
+          course_id: string
+          id?: string
+          prerequisite_course_id: string
+        }
+        Update: {
+          course_id?: string
+          id?: string
+          prerequisite_course_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "specialization_prerequisites_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "specialization_prerequisites_prerequisite_course_id_fkey"
+            columns: ["prerequisite_course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tutor_activity_monthly: {
+        Row: {
+          hours_worked: number | null
+          id: string
+          month: string
+          source: string | null
+          synced_at: string | null
+          tutor_id: string
+        }
+        Insert: {
+          hours_worked?: number | null
+          id?: string
+          month: string
+          source?: string | null
+          synced_at?: string | null
+          tutor_id: string
+        }
+        Update: {
+          hours_worked?: number | null
+          id?: string
+          month?: string
+          source?: string | null
+          synced_at?: string | null
+          tutor_id?: string
+        }
+        Relationships: []
+      }
       tutor_hours: {
         Row: {
           hours: number
@@ -724,6 +802,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_activity_status: { Args: { p_tutor_id: string }; Returns: string }
       has_course_role: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
