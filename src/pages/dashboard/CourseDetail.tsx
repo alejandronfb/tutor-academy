@@ -1,12 +1,13 @@
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ArrowRight, Award, CheckCircle, ClipboardList, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Award, CheckCircle, ClipboardList, Loader2, Lock, Calendar } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 import QuizView from "@/components/QuizView";
 import RichTextRenderer from "@/components/RichTextRenderer";
 
@@ -34,15 +35,16 @@ export default function CourseDetail() {
         .from("lessons").select("*").in("module_id", moduleIds).order("sort_order");
       if (lesErr) throw lesErr;
 
-      // Fetch quizzes for this course
       const { data: quizzes, error: quizErr } = await supabase
         .from("quizzes").select("*").eq("course_id", courseData.id);
       if (quizErr) throw quizErr;
 
-      const modulesWithLessons = modules.map((mod) => ({
+      const now = new Date();
+      const modulesWithLessons = modules.map((mod: any) => ({
         ...mod,
         lessons: lessons.filter((l) => l.module_id === mod.id),
         quiz: quizzes.find((q) => q.module_id === mod.id),
+        released: !mod.release_at || new Date(mod.release_at) <= now,
       }));
 
       const finalQuiz = quizzes.find((q) => q.is_final);
@@ -52,7 +54,6 @@ export default function CourseDetail() {
     enabled: !!courseId,
   });
 
-  // Fetch user's lesson completions for this course
   const { data: completedLessonIds = [] } = useQuery({
     queryKey: ["lesson-completions", course?.id],
     queryFn: async () => {
@@ -61,16 +62,12 @@ export default function CourseDetail() {
       const allLessonIds = course.modules.flatMap((m: any) => m.lessons.map((l: any) => l.id));
       if (allLessonIds.length === 0) return [];
       const { data } = await supabase
-        .from("lesson_completions")
-        .select("lesson_id")
-        .eq("tutor_id", user.id)
-        .in("lesson_id", allLessonIds);
+        .from("lesson_completions").select("lesson_id").eq("tutor_id", user.id).in("lesson_id", allLessonIds);
       return (data || []).map((d) => d.lesson_id);
     },
     enabled: !!course,
   });
 
-  // Fetch user's passed quiz attempts for this course
   const { data: passedQuizIds = [] } = useQuery({
     queryKey: ["passed-quizzes", course?.id],
     queryFn: async () => {
@@ -82,11 +79,7 @@ export default function CourseDetail() {
       ];
       if (allQuizIds.length === 0) return [];
       const { data } = await supabase
-        .from("quiz_attempts")
-        .select("quiz_id")
-        .eq("tutor_id", user.id)
-        .eq("passed", true)
-        .in("quiz_id", allQuizIds);
+        .from("quiz_attempts").select("quiz_id").eq("tutor_id", user.id).eq("passed", true).in("quiz_id", allQuizIds);
       return [...new Set((data || []).map((d) => d.quiz_id))];
     },
     enabled: !!course,
@@ -97,82 +90,45 @@ export default function CourseDetail() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Check if already completed
       const { data: existing } = await supabase
-        .from("lesson_completions")
-        .select("id")
-        .eq("tutor_id", user.id)
-        .eq("lesson_id", lessonId)
-        .maybeSingle();
+        .from("lesson_completions").select("id").eq("tutor_id", user.id).eq("lesson_id", lessonId).maybeSingle();
       if (existing) return { alreadyCompleted: true };
 
-      // Insert completion
-      await supabase.from("lesson_completions").insert({
-        tutor_id: user.id,
-        lesson_id: lessonId,
-      });
+      await supabase.from("lesson_completions").insert({ tutor_id: user.id, lesson_id: lessonId });
+      await supabase.from("activity_points").insert({ tutor_id: user.id, points: 10, reason: `Completed lesson` });
 
-      // Award 10 activity points
-      await supabase.from("activity_points").insert({
-        tutor_id: user.id,
-        points: 10,
-        reason: `Completed lesson: ${currentLesson?.title || "Lesson"}`,
-      });
-
-      // Update streak
       const today = new Date().toISOString().split("T")[0];
       const { data: profile } = await supabase
-        .from("tutor_profiles")
-        .select("last_activity_date, learning_streak")
-        .eq("id", user.id)
-        .single();
+        .from("tutor_profiles").select("last_activity_date, learning_streak").eq("id", user.id).single();
 
       if (profile) {
         const lastDate = profile.last_activity_date;
         const streak = profile.learning_streak || 0;
         const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
-
         let newStreak = 1;
-        if (lastDate === today) {
-          newStreak = streak; // already active today
-        } else if (lastDate === yesterday) {
-          newStreak = streak + 1;
-        }
+        if (lastDate === today) newStreak = streak;
+        else if (lastDate === yesterday) newStreak = streak + 1;
 
-        await supabase
-          .from("tutor_profiles")
-          .update({ last_activity_date: today, learning_streak: newStreak })
-          .eq("id", user.id);
+        await supabase.from("tutor_profiles").update({ last_activity_date: today, learning_streak: newStreak }).eq("id", user.id);
 
-        // Check 7-day streak badge
         if (newStreak >= 7) {
           const { data: badges } = await supabase.from("badges").select("*");
           const weekBadge = badges?.find((b) => b.unlock_type === "streak" && (b.unlock_criteria as any)?.days === 7);
           if (weekBadge) {
-            const { data: existing } = await supabase
-              .from("user_badges")
-              .select("id")
-              .eq("tutor_id", user.id)
-              .eq("badge_id", weekBadge.id)
-              .maybeSingle();
-            if (!existing) {
+            const { data: ex } = await supabase.from("user_badges").select("id").eq("tutor_id", user.id).eq("badge_id", weekBadge.id).maybeSingle();
+            if (!ex) {
               await supabase.from("user_badges").insert({ tutor_id: user.id, badge_id: weekBadge.id });
-              await supabase.from("activity_points").insert({ tutor_id: user.id, points: 50, reason: `Badge unlocked: ${weekBadge.name}` });
-              toast({ title: `🏆 Badge Unlocked: ${weekBadge.name}!`, description: weekBadge.description || "Keep it up!" });
+              toast({ title: `🏆 Badge Unlocked: ${weekBadge.name}!`, description: weekBadge.description || "" });
             }
           }
         }
       }
-
       return { alreadyCompleted: false };
     },
     onSuccess: (result) => {
-      if (!result?.alreadyCompleted) {
-        toast({ title: "✅ Lesson Complete!", description: "+10 activity points earned" });
-      }
+      if (!result?.alreadyCompleted) toast({ title: "✅ Lesson Complete!", description: "+10 activity points earned" });
       queryClient.invalidateQueries({ queryKey: ["lesson-completions"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-home"] });
-      queryClient.invalidateQueries({ queryKey: ["badges"] });
     },
   });
 
@@ -181,16 +137,8 @@ export default function CourseDetail() {
       <div className="animate-fade-in">
         <Skeleton className="h-8 w-48 mb-6" />
         <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-          <div className="rounded-xl border bg-card p-4 shadow-card space-y-3">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-6 w-full" />
-            <Skeleton className="h-6 w-full" />
-          </div>
-          <div className="rounded-xl border bg-card p-6 shadow-card space-y-4">
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-48 w-full" />
-          </div>
+          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-64 rounded-xl" />
         </div>
       </div>
     );
@@ -207,33 +155,16 @@ export default function CourseDetail() {
     );
   }
 
-  const currentModule = course.modules[activeModule];
+  const releasedModules = course.modules.filter((m: any) => m.released);
+  const currentModule = releasedModules[activeModule];
   const currentLesson = currentModule?.lessons[activeLesson];
-  const totalLessons = course.modules.reduce((sum: number, m: any) => sum + m.lessons.length, 0);
-  let lessonNumber = 0;
-  for (let i = 0; i < activeModule; i++) lessonNumber += course.modules[i].lessons.length;
-  lessonNumber += activeLesson + 1;
+  const totalLessons = releasedModules.reduce((sum: number, m: any) => sum + m.lessons.length, 0);
 
   const openModuleQuiz = (mod: any) => {
-    if (mod.quiz) {
-      setShowQuiz({
-        quizId: mod.quiz.id,
-        moduleTitle: mod.title,
-        isFinal: false,
-        passingScore: mod.quiz.passing_score ?? 70,
-      });
-    }
+    if (mod.quiz) setShowQuiz({ quizId: mod.quiz.id, moduleTitle: mod.title, isFinal: false, passingScore: mod.quiz.passing_score ?? 70 });
   };
-
   const openFinalExam = () => {
-    if (course.finalQuiz) {
-      setShowQuiz({
-        quizId: course.finalQuiz.id,
-        moduleTitle: course.title,
-        isFinal: true,
-        passingScore: course.finalQuiz.passing_score ?? 80,
-      });
-    }
+    if (course.finalQuiz) setShowQuiz({ quizId: course.finalQuiz.id, moduleTitle: course.title, isFinal: true, passingScore: course.finalQuiz.passing_score ?? 80 });
   };
 
   return (
@@ -257,45 +188,48 @@ export default function CourseDetail() {
           <div className="space-y-1">
             {course.modules.map((mod: any, mi: number) => (
               <div key={mod.id}>
-                <button
-                  onClick={() => { setActiveModule(mi); setActiveLesson(0); setShowQuiz(null); }}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${mi === activeModule && !showQuiz ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
-                >
-                  Module {mi + 1}: {mod.title}
-                </button>
-                {mi === activeModule && !showQuiz && (
-                  <div className="ml-4 space-y-0.5 mt-1">
-                    {mod.lessons.map((lesson: any, li: number) => (
-                      <button
-                        key={lesson.id}
-                        onClick={() => setActiveLesson(li)}
-                        className={`w-full text-left px-3 py-1.5 rounded text-xs transition-colors flex items-center gap-1.5 ${li === activeLesson ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:text-foreground"}`}
-                      >
-                        {completedLessonIds.includes(lesson.id) && (
-                          <CheckCircle className="h-3 w-3 text-emerald-500 flex-shrink-0" />
+                {mod.released ? (
+                  <>
+                    <button
+                      onClick={() => { setActiveModule(mi); setActiveLesson(0); setShowQuiz(null); }}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${mi === activeModule && !showQuiz ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                    >
+                      Module {mi + 1}: {mod.title}
+                    </button>
+                    {mi === activeModule && !showQuiz && (
+                      <div className="ml-4 space-y-0.5 mt-1">
+                        {mod.lessons.map((lesson: any, li: number) => (
+                          <button
+                            key={lesson.id}
+                            onClick={() => setActiveLesson(li)}
+                            className={`w-full text-left px-3 py-1.5 rounded text-xs transition-colors flex items-center gap-1.5 ${li === activeLesson ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:text-foreground"}`}
+                          >
+                            {completedLessonIds.includes(lesson.id) && <CheckCircle className="h-3 w-3 text-emerald-500 flex-shrink-0" />}
+                            <span>{lesson.title}</span>
+                          </button>
+                        ))}
+                        {mod.quiz && (
+                          <button
+                            onClick={() => openModuleQuiz(mod)}
+                            className={`w-full text-left px-3 py-1.5 rounded text-xs flex items-center gap-1 ${passedQuizIds.includes(mod.quiz.id) ? "text-emerald-600" : "text-amber-600"}`}
+                          >
+                            {passedQuizIds.includes(mod.quiz.id) ? <><CheckCircle className="h-3 w-3" /> Quiz Passed</> : <><ClipboardList className="h-3 w-3" /> Module Quiz</>}
+                          </button>
                         )}
-                        <span>{lesson.title}</span>
-                      </button>
-                    ))}
-                    {mod.quiz && (
-                      <button
-                        onClick={() => openModuleQuiz(mod)}
-                        className={`w-full text-left px-3 py-1.5 rounded text-xs flex items-center gap-1 ${passedQuizIds.includes(mod.quiz.id) ? "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20" : "text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20"}`}
-                      >
-                        {passedQuizIds.includes(mod.quiz.id) ? (
-                          <><CheckCircle className="h-3 w-3" /> Quiz Passed</>
-                        ) : (
-                          <><ClipboardList className="h-3 w-3" /> Module Quiz</>
-                        )}
-                      </button>
+                      </div>
                     )}
+                  </>
+                ) : (
+                  <div className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground/50 flex items-center gap-2">
+                    <Lock className="h-3 w-3" />
+                    <span>Module {mi + 1}: {mod.title}</span>
+                    {mod.release_at && <span className="ml-auto text-[10px] flex items-center gap-1"><Calendar className="h-3 w-3" /> {format(new Date(mod.release_at), "MMM d")}</span>}
                   </div>
                 )}
               </div>
             ))}
           </div>
 
-          {/* Final Exam button */}
           {course.finalQuiz && (() => {
             const finalPassed = passedQuizIds.includes(course.finalQuiz.id);
             return (
@@ -304,11 +238,7 @@ export default function CourseDetail() {
                 className={`w-full mt-3 p-3 rounded-lg border text-left transition-colors ${finalPassed ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20" : showQuiz?.isFinal ? "bg-primary/10 border-primary/30" : "border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/20"}`}
               >
                 <div className="flex items-center gap-2">
-                  {finalPassed ? (
-                    <><CheckCircle className="h-4 w-4 text-emerald-600" /><span className="text-xs font-medium text-emerald-600">Final Exam Passed</span></>
-                  ) : (
-                    <><ClipboardList className="h-4 w-4 text-amber-600" /><span className="text-xs font-medium text-amber-600">Final Exam</span></>
-                  )}
+                  {finalPassed ? <><CheckCircle className="h-4 w-4 text-emerald-600" /><span className="text-xs font-medium text-emerald-600">Final Exam Passed</span></> : <><ClipboardList className="h-4 w-4 text-amber-600" /><span className="text-xs font-medium text-amber-600">Final Exam</span></>}
                 </div>
               </button>
             );
@@ -328,19 +258,12 @@ export default function CourseDetail() {
         {/* Content area */}
         <div className="rounded-xl border bg-card p-6 md:p-8 shadow-card">
           {showQuiz ? (
-            <QuizView
-              quizId={showQuiz.quizId}
-              courseId={course.id}
-              moduleTitle={showQuiz.moduleTitle}
-              isFinal={showQuiz.isFinal}
-              passingScore={showQuiz.passingScore}
-              onClose={() => setShowQuiz(null)}
-            />
+            <QuizView quizId={showQuiz.quizId} courseId={course.id} moduleTitle={showQuiz.moduleTitle} isFinal={showQuiz.isFinal} passingScore={showQuiz.passingScore} onClose={() => setShowQuiz(null)} />
           ) : (
             <>
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs text-muted-foreground">{completedLessonIds.length}/{totalLessons} lessons completed</span>
-                <Progress value={(completedLessonIds.length / totalLessons) * 100} className="w-32 h-2" />
+                <Progress value={totalLessons > 0 ? (completedLessonIds.length / totalLessons) * 100 : 0} className="w-32 h-2" />
               </div>
 
               {currentLesson && (
@@ -349,17 +272,11 @@ export default function CourseDetail() {
                 </div>
               )}
 
-              {/* Navigation */}
               <div className="flex items-center justify-between mt-8 pt-6 border-t">
-                <Button
-                  variant="outline" size="sm"
-                  disabled={activeModule === 0 && activeLesson === 0}
+                <Button variant="outline" size="sm" disabled={activeModule === 0 && activeLesson === 0}
                   onClick={() => {
                     if (activeLesson > 0) setActiveLesson(activeLesson - 1);
-                    else if (activeModule > 0) {
-                      setActiveModule(activeModule - 1);
-                      setActiveLesson(course.modules[activeModule - 1].lessons.length - 1);
-                    }
+                    else if (activeModule > 0) { setActiveModule(activeModule - 1); setActiveLesson(releasedModules[activeModule - 1].lessons.length - 1); }
                   }}
                 >
                   <ArrowLeft className="mr-1 h-4 w-4" /> Previous
@@ -370,34 +287,23 @@ export default function CourseDetail() {
                     <CheckCircle className="mr-1 h-4 w-4" /> Completed
                   </Button>
                 ) : (
-                  <Button
-                    variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700"
-                    disabled={markCompleteMutation.isPending}
+                  <Button variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700" disabled={markCompleteMutation.isPending}
                     onClick={() => currentLesson && markCompleteMutation.mutate(currentLesson.id)}
                   >
-                    {markCompleteMutation.isPending ? (
-                      <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Saving...</>
-                    ) : (
-                      <><CheckCircle className="mr-1 h-4 w-4" /> Mark Complete</>
-                    )}
+                    {markCompleteMutation.isPending ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Saving...</> : <><CheckCircle className="mr-1 h-4 w-4" /> Mark Complete</>}
                   </Button>
                 )}
 
-                {/* If last lesson in module and module has quiz, show "Take Quiz" instead of Next */}
-                {activeLesson === currentModule.lessons.length - 1 && currentModule.quiz ? (
+                {currentModule && activeLesson === currentModule.lessons.length - 1 && currentModule.quiz ? (
                   <Button size="sm" onClick={() => openModuleQuiz(currentModule)} className="bg-amber-600 hover:bg-amber-700">
                     <ClipboardList className="mr-1 h-4 w-4" /> Take Quiz
                   </Button>
                 ) : (
-                  <Button
-                    size="sm"
-                    disabled={activeModule === course.modules.length - 1 && activeLesson === currentModule.lessons.length - 1}
+                  <Button size="sm"
+                    disabled={activeModule === releasedModules.length - 1 && currentModule && activeLesson === currentModule.lessons.length - 1}
                     onClick={() => {
-                      if (activeLesson < currentModule.lessons.length - 1) setActiveLesson(activeLesson + 1);
-                      else if (activeModule < course.modules.length - 1) {
-                        setActiveModule(activeModule + 1);
-                        setActiveLesson(0);
-                      }
+                      if (currentModule && activeLesson < currentModule.lessons.length - 1) setActiveLesson(activeLesson + 1);
+                      else if (activeModule < releasedModules.length - 1) { setActiveModule(activeModule + 1); setActiveLesson(0); }
                     }}
                   >
                     Next <ArrowRight className="ml-1 h-4 w-4" />
