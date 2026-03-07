@@ -16,10 +16,9 @@ export default function CourseCatalog() {
   const { data: courses, isLoading } = useQuery({
     queryKey: ["courses"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("courses")
+      const { data, error } = await (supabase.from("courses") as any)
         .select("*, course_modules(id)")
-        .eq("status" as any, "published")
+        .eq("status", "published")
         .order("sort_order");
       if (error) throw error;
       return data;
