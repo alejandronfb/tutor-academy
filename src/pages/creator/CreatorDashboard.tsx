@@ -16,7 +16,7 @@ export default function CreatorDashboard() {
       // Check if admin
       const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
 
-      let coursesQuery = supabase.from("courses").select("id, title");
+      let coursesQuery = (supabase.from("courses") as any).select("id, title");
       if (!isAdmin) {
         coursesQuery = coursesQuery.eq("created_by", user.id);
       }

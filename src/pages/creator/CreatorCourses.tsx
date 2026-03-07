@@ -22,7 +22,7 @@ export default function CreatorCourses() {
 
       const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
 
-      let query = supabase.from("courses").select("*").order("sort_order");
+      let query = (supabase.from("courses") as any).select("*").order("sort_order");
       if (!isAdmin) {
         query = query.eq("created_by", user.id);
       }
@@ -71,7 +71,7 @@ export default function CreatorCourses() {
       if (!original) throw new Error("Course not found");
 
       // Create copy
-      const { data: newCourse, error: courseErr } = await supabase.from("courses").insert({
+      const { data: newCourse, error: courseErr } = await (supabase.from("courses") as any).insert({
         title: `${original.title} (Copy)`,
         slug: `${original.slug}-copy-${Date.now()}`,
         description: original.description,
@@ -79,7 +79,7 @@ export default function CreatorCourses() {
         difficulty: original.difficulty,
         duration_hours: original.duration_hours,
         certificate_title: original.certificate_title,
-        certificate_template: original.certificate_template,
+        certificate_template: (original as any).certificate_template,
         icon: original.icon,
         status: "draft",
         created_by: user.id,

@@ -73,7 +73,7 @@ export default function CreatorCourseEdit() {
     mutationFn: async (values: any) => {
       // Auto-gen slug from title if empty
       if (!values.slug) values.slug = values.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-      const { error } = await supabase.from("courses").update({
+      const { error } = await (supabase.from("courses") as any).update({
         title: values.title,
         slug: values.slug,
         description: values.description,
