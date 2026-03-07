@@ -17,6 +17,7 @@ import BadgesPage from "./pages/dashboard/BadgesPage";
 import OpportunitiesPage from "./pages/dashboard/OpportunitiesPage";
 import ProficiencyPage from "./pages/dashboard/ProficiencyPage";
 import ProfilePage from "./pages/dashboard/ProfilePage";
+import ResourcesPage from "./pages/dashboard/ResourcesPage";
 import TutorPublicProfile from "./pages/TutorPublicProfile";
 import VerifyCertificate from "./pages/VerifyCertificate";
 import NotFound from "./pages/NotFound";
@@ -55,6 +56,7 @@ const App = () => (
             <Route path="badges" element={<BadgesPage />} />
             <Route path="opportunities" element={<OpportunitiesPage />} />
             <Route path="proficiency" element={<ProficiencyPage />} />
+            <Route path="resources" element={<ResourcesPage />} />
             <Route path="profile" element={<ProfilePage />} />
           </Route>
           <Route path="/admin" element={<AdminLayout />}>

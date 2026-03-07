@@ -15,7 +15,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { NavLink } from "@/components/NavLink";
-import { GraduationCap, LayoutDashboard, BookOpen, Route, Award, Trophy, User, Briefcase, LogOut, FlaskConical, Shield, Paintbrush } from "lucide-react";
+import { GraduationCap, LayoutDashboard, BookOpen, Route, Award, Trophy, User, Briefcase, LogOut, FlaskConical, Shield, Paintbrush, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/NotificationBell";
 
@@ -27,6 +27,7 @@ const NAV_ITEMS = [
   { title: "Badges", url: "/dashboard/badges", icon: Trophy },
   { title: "Advanced Eligibility", url: "/dashboard/opportunities", icon: Briefcase },
   { title: "Skills Check", url: "/dashboard/proficiency", icon: FlaskConical },
+  { title: "Resources", url: "/dashboard/resources", icon: FolderOpen },
   { title: "Profile", url: "/dashboard/profile", icon: User },
 ];
 

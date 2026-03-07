@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { FlaskConical, Clock, CheckCircle, ArrowLeft, ArrowRight, Trophy, Loader2 } from "lucide-react";
+import { FlaskConical, Clock, CheckCircle, ArrowLeft, ArrowRight, Trophy, Loader2, TrendingUp, TrendingDown } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { trackEvent } from "@/lib/trackEvent";
 
 interface ProfQuestion {
   id: string;
@@ -145,6 +146,8 @@ export default function ProficiencyPage() {
         reason: "Completed Skills Check",
       });
 
+      trackEvent("skills_check_completed", { total: totalScore, level });
+
       if (totalScore >= 60) {
         const { data: badges } = await supabase.from("badges").select("*");
         const profBadge = badges?.find((b: any) =>
@@ -160,7 +163,8 @@ export default function ProficiencyPage() {
           if (!existing) {
             await supabase.from("user_badges").insert({ tutor_id: user.id, badge_id: profBadge.id });
             await supabase.from("activity_points").insert({ tutor_id: user.id, points: 50, reason: `Badge earned: ${profBadge.name}` });
-            toast({ title: `🏆 Badge Earned: ${profBadge.name}!`, description: profBadge.description || "" });
+            trackEvent("badge_earned", { badge: profBadge.name });
+            toast({ title: `🏅 Badge Earned: ${profBadge.name}!`, description: profBadge.description || "" });
           }
         }
       }
@@ -180,46 +184,76 @@ export default function ProficiencyPage() {
   // Results screen
   if (submitted && result) {
     const levelColor = result.level === "C2" ? "text-amber-500" : result.level === "C1" ? "text-emerald-600" : result.level === "B2" ? "text-primary" : "text-muted-foreground";
+    const scores = [
+      { label: "Grammar", value: result.grammar },
+      { label: "Vocabulary", value: result.vocabulary },
+      { label: "Reading", value: result.reading },
+    ];
+    const strongest = scores.reduce((a, b) => a.value >= b.value ? a : b);
+    const weakest = scores.reduce((a, b) => a.value <= b.value ? a : b);
+
     return (
       <div className="space-y-6 animate-fade-in max-w-2xl">
-        <div className="text-center py-8 space-y-6 rounded-xl border bg-card p-8 shadow-card">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10">
-            <Trophy className="h-10 w-10 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">Assessment Complete!</h2>
+        <div className="py-8 space-y-6 rounded-xl border bg-card p-8 shadow-card">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10">
+              <Trophy className="h-10 w-10 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground mt-4">Assessment Complete!</h2>
             <p className="text-muted-foreground mt-1">Here are your private results</p>
+            <div className={`text-4xl font-bold mt-4 ${levelColor}`}>Your assessed level: {result.level}</div>
           </div>
-          <div className={`text-4xl font-bold ${levelColor}`}>Your assessed level: {result.level}</div>
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center p-3 rounded-lg bg-muted">
               <p className="text-2xl font-bold text-foreground">{result.total}%</p>
               <p className="text-xs text-muted-foreground">Overall</p>
             </div>
-            <div className="text-center p-3 rounded-lg bg-muted">
-              <p className="text-2xl font-bold text-foreground">{result.grammar}%</p>
-              <p className="text-xs text-muted-foreground">Grammar</p>
+            {scores.map((s) => (
+              <div key={s.label} className="text-center p-3 rounded-lg bg-muted">
+                <p className="text-2xl font-bold text-foreground">{s.value}%</p>
+                <p className="text-xs text-muted-foreground">{s.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Strengths & Areas to Develop */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 p-3">
+              <div className="flex items-center gap-1 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                <TrendingUp className="h-4 w-4" /> Strongest Area
+              </div>
+              <p className="text-lg font-bold text-foreground mt-1">{strongest.label} ({strongest.value}%)</p>
             </div>
-            <div className="text-center p-3 rounded-lg bg-muted">
-              <p className="text-2xl font-bold text-foreground">{result.vocabulary}%</p>
-              <p className="text-xs text-muted-foreground">Vocabulary</p>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-muted">
-              <p className="text-2xl font-bold text-foreground">{result.reading}%</p>
-              <p className="text-xs text-muted-foreground">Reading</p>
+            <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-3">
+              <div className="flex items-center gap-1 text-sm font-medium text-amber-700 dark:text-amber-400">
+                <TrendingDown className="h-4 w-4" /> Area to Develop
+              </div>
+              <p className="text-lg font-bold text-foreground mt-1">{weakest.label} ({weakest.value}%)</p>
             </div>
           </div>
-          <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">
-            <p><strong>Scoring:</strong> 60-74% = B2 · 75-89% = C1 · 90-100% = C2</p>
-            <p className="mt-1">+75 activity points earned</p>
-          </div>
-          <div className="rounded-lg bg-primary/5 border border-primary/10 p-4 text-sm">
-            <p className="font-medium text-foreground mb-2">Based on your results, we recommend:</p>
-            <Button variant="outline" size="sm" asChild>
+
+          {/* Recommended Next Steps */}
+          <div className="rounded-lg bg-primary/5 border border-primary/10 p-4 text-sm space-y-2">
+            <p className="font-medium text-foreground">Recommended Next Steps</p>
+            {result.grammar < 75 && <p className="text-muted-foreground">• Strengthen your grammar skills with grammar-focused courses</p>}
+            {result.vocabulary < 75 && <p className="text-muted-foreground">• Expand your vocabulary through vocabulary-building courses</p>}
+            {result.reading < 75 && <p className="text-muted-foreground">• Improve reading comprehension with reading-intensive courses</p>}
+            {result.total >= 75 && <p className="text-muted-foreground">• Great results! Explore advanced specialization courses</p>}
+            <Button variant="outline" size="sm" asChild className="mt-2">
               <Link to="/dashboard/courses">Browse Learning Library</Link>
             </Button>
           </div>
-          <Button onClick={() => { setStarted(false); setSubmitted(false); }}>Back to Overview</Button>
+
+          <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">
+            <p><strong>Scoring:</strong> 60-74% = B2 · 75-89% = C1 · 90-100% = C2</p>
+            <p className="mt-1">+75 activity points earned</p>
+            <p className="mt-1">Retake available in 30 days</p>
+          </div>
+
+          <div className="text-center">
+            <Button onClick={() => { setStarted(false); setSubmitted(false); }}>Back to Overview</Button>
+          </div>
         </div>
       </div>
     );
@@ -231,7 +265,6 @@ export default function ProficiencyPage() {
     const options = question.options as string[];
     const section = question.section.charAt(0).toUpperCase() + question.section.slice(1);
     const sectionLabel = question.section === "reading" ? "Reading Comprehension" : section;
-
     const isLastQuestion = currentQ === questions.length - 1;
 
     return (
@@ -278,7 +311,6 @@ export default function ProficiencyPage() {
           <Button variant="outline" size="sm" onClick={handlePrev} disabled={currentQ === 0}>
             <ArrowLeft className="mr-1 h-4 w-4" /> Previous
           </Button>
-
           {isLastQuestion ? (
             <Button onClick={handleSubmit} disabled={selectedOption === null || saving}>
               {saving ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Submitting...</> : "Submit Assessment"}
@@ -294,6 +326,14 @@ export default function ProficiencyPage() {
   }
 
   // Overview screen
+  const lastScores = lastResult ? [
+    { label: "Grammar", value: lastResult.grammar_score },
+    { label: "Vocabulary", value: lastResult.vocabulary_score },
+    { label: "Reading", value: lastResult.reading_score },
+  ] : [];
+  const lastStrongest = lastScores.length ? lastScores.reduce((a, b) => (a.value ?? 0) >= (b.value ?? 0) ? a : b) : null;
+  const lastWeakest = lastScores.length ? lastScores.reduce((a, b) => (a.value ?? 0) <= (b.value ?? 0) ? a : b) : null;
+
   return (
     <div className="space-y-6 animate-fade-in max-w-2xl">
       <div>
@@ -325,6 +365,16 @@ export default function ProficiencyPage() {
               <p className="text-xs text-muted-foreground">Reading</p>
             </div>
           </div>
+          {lastStrongest && lastWeakest && (
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 p-2 text-center">
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Strongest: {lastStrongest.label}</p>
+              </div>
+              <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 p-2 text-center">
+                <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">Develop: {lastWeakest.label}</p>
+              </div>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">Your assessed level: {lastResult.level_awarded}</span>
             <span className="text-xs text-muted-foreground">Taken {format(new Date(lastResult.taken_at), "MMM d, yyyy")}</span>

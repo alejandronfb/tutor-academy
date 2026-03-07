@@ -1,16 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock, DollarSign, Video, MessageSquare, MapPin, CheckCircle } from "lucide-react";
+import { Clock, DollarSign, Video, MessageSquare, MapPin, CheckCircle, Award, Shield } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/trackEvent";
 
 export default function OpportunitiesPage() {
   const [modalityFilter, setModalityFilter] = useState("all");
   const [selected, setSelected] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  useEffect(() => { trackEvent("eligibility_viewed"); }, []);
 
   const { data, isLoading } = useQuery({
     queryKey: ["opportunities-page"],
@@ -18,11 +21,17 @@ export default function OpportunitiesPage() {
       const { data: { user } } = await supabase.auth.getUser();
       const { data: opps } = await supabase.from("opportunities").select("*").eq("status", "open").order("created_at", { ascending: false });
       let interests: string[] = [];
+      let certs: any[] = [];
+      let badges: any[] = [];
       if (user) {
         const { data: int } = await supabase.from("opportunity_interest").select("opportunity_id").eq("tutor_id", user.id);
         if (int) interests = int.map((i) => i.opportunity_id);
+        const { data: c } = await supabase.from("certifications").select("title").eq("tutor_id", user.id);
+        certs = c || [];
+        const { data: ub } = await supabase.from("user_badges").select("badge_id, badges(name, icon)").eq("tutor_id", user.id);
+        badges = ub || [];
       }
-      return { opportunities: opps || [], interests, userId: user?.id };
+      return { opportunities: opps || [], interests, userId: user?.id, certs, badges };
     },
   });
 
@@ -51,12 +60,15 @@ export default function OpportunitiesPage() {
     );
   }
 
-  const { opportunities, interests } = data!;
+  const { opportunities, interests, certs, badges } = data!;
   const filtered = opportunities.filter((o: any) => modalityFilter === "all" || o.modality === modalityFilter);
   const selectedOpp = opportunities.find((o: any) => o.id === selected);
   const hasInterest = (id: string) => interests.includes(id);
 
+  const hasCredentials = certs.length > 0 || badges.length > 0;
+
   if (selectedOpp) {
+    const subjectMatch = certs.some((c: any) => selectedOpp.subject && c.title?.toLowerCase().includes(selectedOpp.subject?.toLowerCase()));
     return (
       <div className="space-y-6 animate-fade-in">
         <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>← Back to Advanced Eligibility</Button>
@@ -74,6 +86,13 @@ export default function OpportunitiesPage() {
           <p className="text-sm text-muted-foreground mb-4">{selectedOpp.description}</p>
           <h3 className="font-semibold text-foreground mb-2">Qualifications</h3>
           <p className="text-sm text-muted-foreground mb-6">{selectedOpp.requirements}</p>
+
+          {subjectMatch && (
+            <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 p-3 mb-4 flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
+              <CheckCircle className="h-4 w-4" /> Credentials aligned
+            </div>
+          )}
+
           {hasInterest(selectedOpp.id) ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/30 px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-400"><CheckCircle className="h-4 w-4" /> Readiness Indicated</span>
           ) : (
@@ -93,6 +112,30 @@ export default function OpportunitiesPage() {
         <h1 className="text-2xl font-bold text-foreground">Advanced Eligibility</h1>
         <p className="text-sm text-muted-foreground mt-1">Learning and credentials that may support additional opportunities</p>
       </div>
+
+      {/* Your Readiness section */}
+      {hasCredentials && (
+        <div className="rounded-xl border bg-card p-5 shadow-card">
+          <div className="flex items-center gap-3 mb-3">
+            <Shield className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold text-foreground">Your Readiness</h2>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {certs.map((c: any, i: number) => (
+              <span key={`c-${i}`} className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary flex items-center gap-1">
+                <Award className="h-3 w-3" /> {c.title}
+              </span>
+            ))}
+            {badges.map((b: any, i: number) => (
+              <span key={`b-${i}`} className="rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent flex items-center gap-1">
+                {(b.badges as any)?.icon || "🏅"} {(b.badges as any)?.name}
+              </span>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">These may support eligibility for opportunities below</p>
+        </div>
+      )}
+
       <div className="flex gap-3">
         <Select value={modalityFilter} onValueChange={setModalityFilter}>
           <SelectTrigger className="w-[160px]"><SelectValue placeholder="Modality" /></SelectTrigger>
@@ -109,29 +152,37 @@ export default function OpportunitiesPage() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {filtered.map((opp: any) => (
-            <div key={opp.id} className="rounded-xl border bg-card p-5 shadow-card hover:shadow-card-hover transition-shadow cursor-pointer" onClick={() => setSelected(opp.id)}>
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-foreground">{opp.title}</h3>
-                    {hasInterest(opp.id) ? (
-                      <span className="rounded-full bg-emerald-100 dark:bg-emerald-950/30 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">Ready</span>
-                    ) : (
-                      <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">Open</span>
-                    )}
+          {filtered.map((opp: any) => {
+            const subjectMatch = certs.some((c: any) => opp.subject && c.title?.toLowerCase().includes(opp.subject?.toLowerCase()));
+            return (
+              <div key={opp.id} className="rounded-xl border bg-card p-5 shadow-card hover:shadow-card-hover transition-shadow cursor-pointer" onClick={() => setSelected(opp.id)}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-foreground">{opp.title}</h3>
+                      {hasInterest(opp.id) ? (
+                        <span className="rounded-full bg-emerald-100 dark:bg-emerald-950/30 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">Ready</span>
+                      ) : (
+                        <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">Open</span>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">{opp.client}</p>
+                    {subjectMatch ? (
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Credentials aligned</p>
+                    ) : opp.subject ? (
+                      <p className="text-xs text-muted-foreground mt-1">Suggested preparation: {opp.subject} certification</p>
+                    ) : null}
                   </div>
-                  <p className="text-sm text-muted-foreground">{opp.client}</p>
+                  <span className="font-semibold text-primary text-sm">{opp.pay_rate}</span>
                 </div>
-                <span className="font-semibold text-primary text-sm">{opp.pay_rate}</span>
+                <div className="flex flex-wrap gap-4 mt-3 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">{opp.modality === "Video" ? <Video className="h-3 w-3" /> : <MessageSquare className="h-3 w-3" />} {opp.modality}</span>
+                  <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {opp.hours_per_week} hrs/week</span>
+                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {opp.schedule}</span>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-4 mt-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">{opp.modality === "Video" ? <Video className="h-3 w-3" /> : <MessageSquare className="h-3 w-3" />} {opp.modality}</span>
-                <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {opp.hours_per_week} hrs/week</span>
-                <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {opp.schedule}</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
