@@ -1,4 +1,5 @@
-import { Award, Download, ExternalLink, Copy, Clipboard } from "lucide-react";
+import { useState } from "react";
+import { Award, Download, ExternalLink, Copy, Clipboard, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,8 +8,14 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { generateCertificatePdf } from "@/lib/generateCertificatePdf";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/trackEvent";
+import LinkedInShareModal from "@/components/LinkedInShareModal";
+import CVShareModal from "@/components/CVShareModal";
 
 export default function CertificationsPage() {
+  const [linkedInCert, setLinkedInCert] = useState<any>(null);
+  const [cvCert, setCvCert] = useState<any>(null);
+
   const { data, isLoading } = useQuery({
     queryKey: ["certifications-page"],
     queryFn: async () => {
@@ -43,12 +50,7 @@ export default function CertificationsPage() {
   const copyVerifyLink = (verificationId: string) => {
     navigator.clipboard.writeText(`${window.location.origin}/verify/${verificationId}`);
     toast.success("Verification link copied to clipboard");
-  };
-
-  const copyForLinkedIn = (cert: any) => {
-    const text = `${cert.title}\nIssued by: LatinHire Tutor Academy\nDate: ${format(new Date(cert.issued_at), "MMMM d, yyyy")}\nCredential ID: ${cert.verification_id}\nVerify: ${window.location.origin}/verify/${cert.verification_id}`;
-    navigator.clipboard.writeText(text);
-    toast.success("Credential details copied for LinkedIn");
+    trackEvent("certificate_shared", { method: "verify_link", cert_id: verificationId });
   };
 
   return (
@@ -80,39 +82,30 @@ export default function CertificationsPage() {
                     variant="outline"
                     size="sm"
                     className="h-7 text-xs"
-                    onClick={() => generateCertificatePdf({
-                      tutorName,
-                      certTitle: cert.title,
-                      issuedAt: format(new Date(cert.issued_at), "MMMM d, yyyy"),
-                      verificationId: cert.verification_id,
-                      template: (cert as any).certificate_template || "classic",
-                    })}
+                    onClick={() => {
+                      trackEvent("certificate_downloaded", { cert_id: cert.verification_id });
+                      generateCertificatePdf({
+                        tutorName,
+                        certTitle: cert.title,
+                        issuedAt: format(new Date(cert.issued_at), "MMMM d, yyyy"),
+                        verificationId: cert.verification_id,
+                        template: (cert as any).certificate_template || "classic",
+                      });
+                    }}
                   >
                     <Download className="h-3 w-3 mr-1" /> Download PDF
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => copyVerifyLink(cert.verification_id)}
-                  >
-                    <Copy className="h-3 w-3 mr-1" /> Copy Verification Link
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => copyVerifyLink(cert.verification_id)}>
+                    <Copy className="h-3 w-3 mr-1" /> Copy Link
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => copyForLinkedIn(cert)}
-                  >
-                    <Clipboard className="h-3 w-3 mr-1" /> Copy for LinkedIn
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setLinkedInCert(cert)}>
+                    <Clipboard className="h-3 w-3 mr-1" /> LinkedIn
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => window.open(`/verify/${cert.verification_id}`, "_blank", "noopener,noreferrer")}
-                  >
-                    <ExternalLink className="h-3 w-3 mr-1" /> Open Verification Page
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setCvCert(cert)}>
+                    <FileText className="h-3 w-3 mr-1" /> Use on CV
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => window.open(`/verify/${cert.verification_id}`, "_blank", "noopener,noreferrer")}>
+                    <ExternalLink className="h-3 w-3 mr-1" /> Verify
                   </Button>
                 </div>
               </div>
@@ -149,6 +142,13 @@ export default function CertificationsPage() {
           })}
         </div>
       </div>
+
+      {linkedInCert && (
+        <LinkedInShareModal open={!!linkedInCert} onOpenChange={(o) => !o && setLinkedInCert(null)} cert={linkedInCert} />
+      )}
+      {cvCert && (
+        <CVShareModal open={!!cvCert} onOpenChange={(o) => !o && setCvCert(null)} cert={cvCert} />
+      )}
     </div>
   );
 }

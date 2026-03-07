@@ -6,8 +6,11 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { TUTOR_LEVELS } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
+import { trackEvent } from "@/lib/trackEvent";
 
 export default function DashboardHome() {
+  useEffect(() => { trackEvent("dashboard_viewed"); }, []);
+
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-home"],
     queryFn: async () => {
@@ -25,7 +28,6 @@ export default function DashboardHome() {
       const totalCourses = (await supabase.from("courses").select("id", { count: "exact", head: true })).count || 0;
       const completedCourses = (enrollmentsRes.data || []).filter((e) => e.completed_at).length;
 
-      // Get monthly progress
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
