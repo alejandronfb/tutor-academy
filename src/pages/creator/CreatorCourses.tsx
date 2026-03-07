@@ -8,11 +8,22 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Edit, Copy, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function CreatorCourses() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [duplicating, setDuplicating] = useState<string | null>(null);
+  const [confirmDuplicate, setConfirmDuplicate] = useState<{ id: string; title: string } | null>(null);
 
   const { data: courses = [], isLoading } = useQuery({
     queryKey: ["creator-courses"],
@@ -28,7 +39,6 @@ export default function CreatorCourses() {
       }
       const { data: coursesData } = await query;
 
-      // Get enrollment counts
       const { data: enrollments } = await supabase.from("course_enrollments").select("course_id");
       const counts: Record<string, number> = {};
       (enrollments ?? []).forEach((e: any) => { counts[e.course_id] = (counts[e.course_id] ?? 0) + 1; });
@@ -66,11 +76,9 @@ export default function CreatorCourses() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get original course
       const { data: original } = await supabase.from("courses").select("*").eq("id", courseId).single();
       if (!original) throw new Error("Course not found");
 
-      // Create copy
       const { data: newCourse, error: courseErr } = await (supabase.from("courses") as any).insert({
         title: `${original.title} (Copy)`,
         slug: `${original.slug}-copy-${Date.now()}`,
@@ -87,7 +95,6 @@ export default function CreatorCourses() {
       }).select().single();
       if (courseErr) throw courseErr;
 
-      // Copy modules
       const { data: modules } = await supabase.from("course_modules").select("*").eq("course_id", courseId).order("sort_order");
       for (const mod of modules ?? []) {
         const { data: newMod } = await supabase.from("course_modules").insert({
@@ -97,7 +104,6 @@ export default function CreatorCourses() {
         }).select().single();
         if (!newMod) continue;
 
-        // Copy lessons
         const { data: lessons } = await supabase.from("lessons").select("*").eq("module_id", mod.id).order("sort_order");
         for (const lesson of lessons ?? []) {
           await supabase.from("lessons").insert({
@@ -108,7 +114,6 @@ export default function CreatorCourses() {
           });
         }
 
-        // Copy module quiz
         const { data: quizzes } = await supabase.from("quizzes").select("*, quiz_questions(*)").eq("module_id", mod.id);
         for (const quiz of quizzes ?? []) {
           const { data: newQuiz } = await supabase.from("quizzes").insert({
@@ -131,7 +136,6 @@ export default function CreatorCourses() {
         }
       }
 
-      // Copy final quiz
       const { data: finalQuizzes } = await supabase.from("quizzes").select("*, quiz_questions(*)").eq("course_id", courseId).is("module_id", null).eq("is_final", true);
       for (const quiz of finalQuizzes ?? []) {
         const { data: newQuiz } = await supabase.from("quizzes").insert({
@@ -157,11 +161,12 @@ export default function CreatorCourses() {
     },
     onSuccess: (data) => {
       setDuplicating(null);
+      setConfirmDuplicate(null);
       queryClient.invalidateQueries({ queryKey: ["creator-courses"] });
       navigate(`/creator/courses/${data.id}`);
-      toast.success("Course duplicated");
+      toast.success("Course duplicated successfully");
     },
-    onError: (e: any) => { setDuplicating(null); toast.error(e.message); },
+    onError: (e: any) => { setDuplicating(null); setConfirmDuplicate(null); toast.error(e.message); },
   });
 
   return (
@@ -213,7 +218,7 @@ export default function CreatorCourses() {
                       <Button
                         variant="ghost" size="sm"
                         disabled={duplicating === c.id}
-                        onClick={() => duplicateCourse.mutate(c.id)}
+                        onClick={() => setConfirmDuplicate({ id: c.id, title: c.title })}
                       >
                         {duplicating === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
                       </Button>
@@ -232,6 +237,23 @@ export default function CreatorCourses() {
           </Table>
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!confirmDuplicate} onOpenChange={(open) => !open && setConfirmDuplicate(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Duplicate "{confirmDuplicate?.title}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will create a copy of the course including all modules, lessons, quizzes, and questions. The copy will be saved as a draft.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => confirmDuplicate && duplicateCourse.mutate(confirmDuplicate.id)}>
+              Duplicate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

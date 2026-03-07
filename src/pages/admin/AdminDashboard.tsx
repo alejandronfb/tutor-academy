@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Award, BookOpen, TrendingUp, BarChart3 } from "lucide-react";
+import { Users, Award, BookOpen, TrendingUp, BarChart3, AlertTriangle, Database } from "lucide-react";
 import { startOfWeek } from "date-fns";
 
 export default function AdminDashboard() {
@@ -18,7 +18,6 @@ export default function AdminDashboard() {
         supabase.from("quiz_attempts").select("score"),
       ]);
 
-      // Most popular course
       const courseCounts: Record<string, { title: string; count: number }> = {};
       (enrollments.data ?? []).forEach((e: any) => {
         const title = e.courses?.title ?? "Unknown";
@@ -40,6 +39,24 @@ export default function AdminDashboard() {
     },
   });
 
+  const { data: seedStats } = useQuery({
+    queryKey: ["admin-seed-stats"],
+    queryFn: async () => {
+      const [courses, profQ, badges, codes] = await Promise.all([
+        supabase.from("courses").select("id", { count: "exact", head: true }),
+        (supabase.from("proficiency_questions") as any).select("id", { count: "exact", head: true }),
+        supabase.from("badges").select("id", { count: "exact", head: true }),
+        supabase.from("invitation_codes").select("id", { count: "exact", head: true }).is("used_by", null),
+      ]);
+      return {
+        coursesSeeded: courses.count ?? 0,
+        proficiencyQuestions: profQ.count ?? 0,
+        badgesDefined: badges.count ?? 0,
+        codesAvailable: codes.count ?? 0,
+      };
+    },
+  });
+
   const cards = [
     { label: "Total Tutors", value: stats?.totalTutors ?? "–", icon: Users, color: "text-primary" },
     { label: "Completions This Week", value: stats?.weeklyCompletions ?? "–", icon: TrendingUp, color: "text-accent" },
@@ -48,9 +65,22 @@ export default function AdminDashboard() {
     { label: "Avg Quiz Score", value: stats?.avgQuizScore != null ? `${stats.avgQuizScore}%` : "–", icon: BarChart3, color: "text-primary" },
   ];
 
+  const needsSeed = seedStats && (seedStats.coursesSeeded === 0 || seedStats.proficiencyQuestions === 0 || seedStats.badgesDefined === 0);
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
+
+      {needsSeed && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-amber-800 dark:text-amber-400">The academy needs seed data</p>
+            <p className="text-sm text-amber-700 dark:text-amber-500 mt-1">Use the Content Studio to create courses or run the seed migration.</p>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {cards.map((c) => (
           <Card key={c.label}>
@@ -64,6 +94,34 @@ export default function AdminDashboard() {
           </Card>
         ))}
       </div>
+
+      {seedStats && (
+        <div>
+          <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+            <Database className="h-5 w-5 text-muted-foreground" /> Platform Data Status
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: "Courses Seeded", value: `${seedStats.coursesSeeded}/7`, ok: seedStats.coursesSeeded >= 7 },
+              { label: "Proficiency Questions", value: `${seedStats.proficiencyQuestions}/40`, ok: seedStats.proficiencyQuestions >= 40 },
+              { label: "Badges Defined", value: `${seedStats.badgesDefined}/13`, ok: seedStats.badgesDefined >= 13 },
+              { label: "Invitation Codes Available", value: String(seedStats.codesAvailable), ok: seedStats.codesAvailable > 0 },
+            ].map((item) => (
+              <Card key={item.label}>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">{item.label}</span>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${item.ok ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400" : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400"}`}>
+                      {item.ok ? "✓" : "⚠️"}
+                    </span>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground mt-1">{item.value}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
