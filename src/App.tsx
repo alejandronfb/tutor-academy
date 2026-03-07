@@ -29,6 +29,7 @@ import AdminCodes from "./pages/admin/AdminCodes";
 import AdminOpportunities from "./pages/admin/AdminOpportunities";
 import AdminBadges from "./pages/admin/AdminBadges";
 import AdminActivity from "./pages/admin/AdminActivity";
+import AdminCertifications from "./pages/admin/AdminCertifications";
 import CreatorLayout from "./components/CreatorLayout";
 import CreatorDashboard from "./pages/creator/CreatorDashboard";
 import CreatorCourses from "./pages/creator/CreatorCourses";
