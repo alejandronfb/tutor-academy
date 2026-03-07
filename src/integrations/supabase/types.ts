@@ -163,8 +163,10 @@ export type Database = {
       }
       courses: {
         Row: {
+          certificate_template: string | null
           certificate_title: string | null
           created_at: string | null
+          created_by: string | null
           description: string | null
           difficulty: string | null
           duration_hours: number | null
@@ -173,11 +175,14 @@ export type Database = {
           pathway: string
           slug: string
           sort_order: number | null
+          status: string | null
           title: string
         }
         Insert: {
+          certificate_template?: string | null
           certificate_title?: string | null
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           difficulty?: string | null
           duration_hours?: number | null
@@ -186,11 +191,14 @@ export type Database = {
           pathway: string
           slug: string
           sort_order?: number | null
+          status?: string | null
           title: string
         }
         Update: {
+          certificate_template?: string | null
           certificate_title?: string | null
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           difficulty?: string | null
           duration_hours?: number | null
@@ -199,6 +207,7 @@ export type Database = {
           pathway?: string
           slug?: string
           sort_order?: number | null
+          status?: string | null
           title?: string
         }
         Relationships: []
