@@ -102,7 +102,7 @@ export default function CreatorCourseEdit() {
       const lessonCount = lessons.filter(l => moduleIds.includes(l.module_id!)).length;
       if (lessonCount === 0) throw new Error("Need at least 1 lesson to publish");
 
-      const { error } = await supabase.from("courses").update({ status: "published" }).eq("id", id!);
+      const { error } = await (supabase.from("courses") as any).update({ status: "published" }).eq("id", id!);
       if (error) throw error;
     },
     onSuccess: () => {
