@@ -382,7 +382,16 @@ export default function CourseDetail() {
                       if (line.startsWith("> ")) { elements.push(<blockquote key={i} className="border-l-4 border-primary/30 pl-4 py-1 my-3 italic text-sm text-muted-foreground">{renderInline(line.slice(2))}</blockquote>); return; }
                       if (line.startsWith("- [ ] ")) { elements.push(<li key={i} className="text-sm text-muted-foreground ml-4 list-none flex items-center gap-2"><span className="inline-block w-4 h-4 border border-border rounded" />{renderInline(line.slice(6))}</li>); return; }
                       if (line.startsWith("- ")) { elements.push(<li key={i} className="text-sm text-muted-foreground ml-4">{renderInline(line.slice(2))}</li>); return; }
-                      if (/^\d+\.\s/.test(line)) { elements.push(<li key={i} className="text-sm text-muted-foreground ml-4 list-decimal">{renderInline(line.replace(/^\d+\.\s/, ""))}</li>); return; }
+                      if (/^\d+\.\s/.test(line)) { 
+                        const num = line.match(/^(\d+)\./)?.[1];
+                        elements.push(
+                          <div key={i} className="text-sm text-muted-foreground ml-4 flex gap-2">
+                            <span className="text-foreground font-medium shrink-0">{num}.</span>
+                            <span>{renderInline(line.replace(/^\d+\.\s/, ""))}</span>
+                          </div>
+                        ); 
+                        return; 
+                      }
                       if (line.startsWith("|") && line.endsWith("|")) {
                         if (line.includes("---")) return; // separator row
                         const cells = line.split("|").filter(c => c.trim() !== "");
