@@ -21,16 +21,16 @@ export function Navbar() {
         {/* Desktop */}
         <div className="hidden items-center gap-6 md:flex">
           <Link to="/courses" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            Courses
+            Learning Library
           </Link>
           <Link to="/pathways" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            Learning Paths
+            Specializations
           </Link>
           <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             Log In
           </Link>
           <Button variant="success" size="sm" asChild>
-            <Link to="/register">Get Started</Link>
+            <Link to="/register">Enter the Academy</Link>
           </Button>
         </div>
 
@@ -43,11 +43,11 @@ export function Navbar() {
       {mobileOpen && (
         <div className="border-t bg-background p-4 md:hidden">
           <div className="flex flex-col gap-3">
-            <Link to="/courses" className="text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>Courses</Link>
-            <Link to="/pathways" className="text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>Learning Paths</Link>
+            <Link to="/courses" className="text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>Learning Library</Link>
+            <Link to="/pathways" className="text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>Specializations</Link>
             <Link to="/login" className="text-sm font-medium text-muted-foreground" onClick={() => setMobileOpen(false)}>Log In</Link>
             <Button variant="success" size="sm" asChild>
-              <Link to="/register" onClick={() => setMobileOpen(false)}>Get Started</Link>
+              <Link to="/register" onClick={() => setMobileOpen(false)}>Enter the Academy</Link>
             </Button>
           </div>
         </div>

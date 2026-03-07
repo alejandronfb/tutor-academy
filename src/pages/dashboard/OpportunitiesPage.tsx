@@ -26,7 +26,7 @@ export default function OpportunitiesPage() {
     },
   });
 
-  const expressInterest = useMutation({
+  const indicateReadiness = useMutation({
     mutationFn: async (oppId: string) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -34,10 +34,10 @@ export default function OpportunitiesPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Interest expressed! The team will review your profile.");
+      toast.success("Your readiness has been noted. The LatinHire team may follow up based on your credentials and learning.");
       queryClient.invalidateQueries({ queryKey: ["opportunities-page"] });
     },
-    onError: () => toast.error("Could not express interest. Please try again."),
+    onError: () => toast.error("Could not indicate readiness. Please try again."),
   });
 
   if (isLoading) {
@@ -59,7 +59,7 @@ export default function OpportunitiesPage() {
   if (selectedOpp) {
     return (
       <div className="space-y-6 animate-fade-in">
-        <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>← Back to Opportunities</Button>
+        <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>← Back to Advanced Eligibility</Button>
         <div className="rounded-xl border bg-card p-6 md:p-8 shadow-card">
           <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">Open</span>
           <h1 className="text-2xl font-bold text-foreground mt-2 mb-2">{selectedOpp.title}</h1>
@@ -75,13 +75,13 @@ export default function OpportunitiesPage() {
           <h3 className="font-semibold text-foreground mb-2">Qualifications</h3>
           <p className="text-sm text-muted-foreground mb-6">{selectedOpp.requirements}</p>
           {hasInterest(selectedOpp.id) ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/30 px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-400"><CheckCircle className="h-4 w-4" /> Interest Expressed</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/30 px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-400"><CheckCircle className="h-4 w-4" /> Readiness Indicated</span>
           ) : (
-            <Button onClick={() => expressInterest.mutate(selectedOpp.id)} disabled={expressInterest.isPending}>
-              <CheckCircle className="mr-2 h-4 w-4" /> Express Interest
+            <Button onClick={() => indicateReadiness.mutate(selectedOpp.id)} disabled={indicateReadiness.isPending}>
+              <CheckCircle className="mr-2 h-4 w-4" /> Indicate Readiness
             </Button>
           )}
-          <p className="text-xs text-muted-foreground mt-2">Your interest will be recorded. The LatinHire team will review your profile.</p>
+          <p className="text-xs text-muted-foreground mt-2">Your readiness has been noted. The LatinHire team may follow up based on your credentials and learning.</p>
         </div>
       </div>
     );
@@ -90,8 +90,8 @@ export default function OpportunitiesPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Tutoring Opportunities</h1>
-        <p className="text-sm text-muted-foreground mt-1">Discover available tutoring engagements within the LatinHire network</p>
+        <h1 className="text-2xl font-bold text-foreground">Advanced Eligibility</h1>
+        <p className="text-sm text-muted-foreground mt-1">Learning and credentials that may support additional opportunities</p>
       </div>
       <div className="flex gap-3">
         <Select value={modalityFilter} onValueChange={setModalityFilter}>
@@ -105,7 +105,7 @@ export default function OpportunitiesPage() {
       </div>
       {filtered.length === 0 ? (
         <div className="rounded-xl border bg-card p-8 text-center">
-          <p className="text-muted-foreground">No open opportunities at this time. Check back soon!</p>
+          <p className="text-muted-foreground">No advanced opportunities at this time. Check back soon!</p>
         </div>
       ) : (
         <div className="grid gap-4">
@@ -116,7 +116,7 @@ export default function OpportunitiesPage() {
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-semibold text-foreground">{opp.title}</h3>
                     {hasInterest(opp.id) ? (
-                      <span className="rounded-full bg-emerald-100 dark:bg-emerald-950/30 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">Applied</span>
+                      <span className="rounded-full bg-emerald-100 dark:bg-emerald-950/30 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">Ready</span>
                     ) : (
                       <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">Open</span>
                     )}

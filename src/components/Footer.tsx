@@ -16,16 +16,16 @@ export function Footer() {
               </span>
             </div>
             <p className="text-sm text-primary-foreground/60 max-w-sm">
-              Optional professional development resources and certifications for independent tutors in the LatinHire network.
+              Professional development resources and certifications for independent tutors in the LatinHire network.
             </p>
           </div>
 
           <div>
             <h4 className="font-semibold text-primary-foreground mb-3 text-sm">Platform</h4>
             <div className="flex flex-col gap-2">
-              <Link to="/dashboard/courses" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">Courses</Link>
-              <Link to="/dashboard/pathways" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">Learning Paths</Link>
-              <Link to="/register" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">Get Started</Link>
+              <Link to="/dashboard/courses" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">Learning Library</Link>
+              <Link to="/dashboard/pathways" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">Specializations</Link>
+              <Link to="/register" className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors">Enter the Academy</Link>
             </div>
           </div>
 
@@ -41,7 +41,7 @@ export function Footer() {
 
         <div className="mt-10 border-t border-primary-foreground/10 pt-6">
           <p className="text-xs text-primary-foreground/40 max-w-3xl">
-            LatinHire Tutor Academy offers optional professional development resources for independent tutors. Participation does not create an employment relationship and does not affect a tutor's independent contractor status.
+            Tutor Academy is a voluntary professional development resource for independent tutors in the LatinHire network. Participation does not create an employment relationship.
           </p>
           <p className="text-xs text-primary-foreground/40 mt-2">
             © {new Date().getFullYear()} LatinHire. All rights reserved.

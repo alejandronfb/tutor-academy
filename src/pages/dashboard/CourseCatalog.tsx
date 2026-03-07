@@ -37,8 +37,8 @@ export default function CourseCatalog() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Course Catalog</h1>
-        <p className="text-sm text-muted-foreground mt-1">Explore professional development courses at your own pace</p>
+        <h1 className="text-2xl font-bold text-foreground">Learning Library</h1>
+        <p className="text-sm text-muted-foreground mt-1">Practical courses for your professional development</p>
       </div>
 
       {/* Filters */}
@@ -48,9 +48,9 @@ export default function CourseCatalog() {
           <Input className="pl-9" placeholder="Search courses..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <Select value={pathwayFilter} onValueChange={setPathwayFilter}>
-          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Pathway" /></SelectTrigger>
+          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Specialization" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Pathways</SelectItem>
+            <SelectItem value="all">All Specializations</SelectItem>
             {pathways.map((p) => (
               <SelectItem key={p} value={p}>{p}</SelectItem>
             ))}
