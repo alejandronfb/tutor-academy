@@ -1,11 +1,10 @@
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 
 const PATHWAYS_DATA = [
   {
     id: "core",
-    name: "Core Path",
+    name: "Core Specialization",
     icon: "🎓",
     description: "Essential skills every professional tutor should develop",
     required: true,
@@ -15,7 +14,7 @@ const PATHWAYS_DATA = [
   },
   {
     id: "english",
-    name: "English Tutor Path",
+    name: "English Tutor Specialization",
     icon: "💬",
     description: "Specialized techniques for teaching English conversation and to young learners",
     courses: [
@@ -25,7 +24,7 @@ const PATHWAYS_DATA = [
   },
   {
     id: "stem",
-    name: "STEM Tutor Path",
+    name: "STEM Tutor Specialization",
     icon: "🔬",
     description: "Methods for teaching math, science, and analytical subjects effectively",
     courses: [
@@ -34,7 +33,7 @@ const PATHWAYS_DATA = [
   },
   {
     id: "writing",
-    name: "Writing Tutor Path",
+    name: "Writing Tutor Specialization",
     icon: "✍️",
     description: "Skills for guiding students through academic and creative writing",
     courses: [
@@ -43,7 +42,7 @@ const PATHWAYS_DATA = [
   },
   {
     id: "modality",
-    name: "Modality-Specific",
+    name: "Modality Specialization",
     icon: "📹",
     description: "Master the unique skills required for your preferred teaching format",
     courses: [
@@ -57,13 +56,12 @@ export default function PathwaysPage() {
   return (
     <div className="space-y-8 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Learning Paths</h1>
-        <p className="text-sm text-muted-foreground mt-1">Structured pathways to develop your teaching expertise</p>
+        <h1 className="text-2xl font-bold text-foreground">Specializations</h1>
+        <p className="text-sm text-muted-foreground mt-1">Focused development tracks to build advanced expertise</p>
       </div>
 
-      {/* Visual roadmap */}
       <div className="space-y-6">
-        {PATHWAYS_DATA.map((pathway, pi) => (
+        {PATHWAYS_DATA.map((pathway) => (
           <div key={pathway.id} className="rounded-xl border bg-card p-6 shadow-card">
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-2xl">
@@ -78,7 +76,6 @@ export default function PathwaysPage() {
                 </div>
                 <p className="text-sm text-muted-foreground mb-4">{pathway.description}</p>
 
-                {/* Course nodes */}
                 <div className="flex flex-wrap gap-3">
                   {pathway.courses.map((course, ci) => (
                     <div key={course.id} className="flex items-center gap-2">
@@ -101,14 +98,14 @@ export default function PathwaysPage() {
 
       {/* Level progression */}
       <div className="rounded-xl border bg-card p-6 shadow-card">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Tutor Level Progression</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-4">Track Progression</h2>
         <div className="grid gap-4 md:grid-cols-4">
           {[
             { level: 1, name: "Certified Tutor", req: "Complete Foundations course", color: "bg-muted" },
             { level: 2, name: "Advanced Tutor", req: "+2 specialization courses + 1 modality course", color: "bg-primary/10" },
-            { level: 3, name: "Expert Tutor", req: "All courses in primary pathway + proficiency test", color: "bg-primary/10" },
+            { level: 3, name: "Expert Tutor", req: "All courses in primary specialization + skills check", color: "bg-primary/10" },
             { level: 4, name: "Master Tutor", req: "All certifications + 500 hours logged", color: "gradient-navy" },
-          ].map((level, i) => (
+          ].map((level) => (
             <div key={level.level} className={`rounded-xl p-4 ${level.level === 4 ? "gradient-navy" : "border"}`}>
               <div className={`text-xs font-medium uppercase tracking-wider mb-1 ${level.level === 4 ? "text-accent" : "text-muted-foreground"}`}>
                 Level {level.level}

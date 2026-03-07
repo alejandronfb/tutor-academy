@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 
 interface ProfQuestion {
   id: string;
@@ -129,7 +130,6 @@ export default function ProficiencyPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Save result
       await supabase.from("proficiency_results").insert({
         tutor_id: user.id,
         grammar_score: grammarScore,
@@ -139,14 +139,12 @@ export default function ProficiencyPage() {
         level_awarded: level,
       });
 
-      // Award activity points
       await supabase.from("activity_points").insert({
         tutor_id: user.id,
         points: 75,
-        reason: "Completed English Proficiency Test",
+        reason: "Completed Skills Check",
       });
 
-      // Award proficiency badge if B2 or above
       if (totalScore >= 60) {
         const { data: badges } = await supabase.from("badges").select("*");
         const profBadge = badges?.find((b: any) =>
@@ -161,8 +159,8 @@ export default function ProficiencyPage() {
             .maybeSingle();
           if (!existing) {
             await supabase.from("user_badges").insert({ tutor_id: user.id, badge_id: profBadge.id });
-            await supabase.from("activity_points").insert({ tutor_id: user.id, points: 50, reason: `Badge unlocked: ${profBadge.name}` });
-            toast({ title: `🏆 Badge Unlocked: ${profBadge.name}!`, description: profBadge.description || "" });
+            await supabase.from("activity_points").insert({ tutor_id: user.id, points: 50, reason: `Badge earned: ${profBadge.name}` });
+            toast({ title: `🏆 Badge Earned: ${profBadge.name}!`, description: profBadge.description || "" });
           }
         }
       }
@@ -189,10 +187,10 @@ export default function ProficiencyPage() {
             <Trophy className="h-10 w-10 text-primary" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Test Complete!</h2>
-            <p className="text-muted-foreground mt-1">Here are your results</p>
+            <h2 className="text-2xl font-bold text-foreground">Assessment Complete!</h2>
+            <p className="text-muted-foreground mt-1">Here are your private results</p>
           </div>
-          <div className={`text-4xl font-bold ${levelColor}`}>{result.level}</div>
+          <div className={`text-4xl font-bold ${levelColor}`}>Your assessed level: {result.level}</div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center p-3 rounded-lg bg-muted">
               <p className="text-2xl font-bold text-foreground">{result.total}%</p>
@@ -215,6 +213,12 @@ export default function ProficiencyPage() {
             <p><strong>Scoring:</strong> 60-74% = B2 · 75-89% = C1 · 90-100% = C2</p>
             <p className="mt-1">+75 activity points earned</p>
           </div>
+          <div className="rounded-lg bg-primary/5 border border-primary/10 p-4 text-sm">
+            <p className="font-medium text-foreground mb-2">Based on your results, we recommend:</p>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/dashboard/courses">Browse Learning Library</Link>
+            </Button>
+          </div>
           <Button onClick={() => { setStarted(false); setSubmitted(false); }}>Back to Overview</Button>
         </div>
       </div>
@@ -227,10 +231,6 @@ export default function ProficiencyPage() {
     const options = question.options as string[];
     const section = question.section.charAt(0).toUpperCase() + question.section.slice(1);
     const sectionLabel = question.section === "reading" ? "Reading Comprehension" : section;
-
-    // Check if this reading passage is different from previous question's passage
-    const prevQ = currentQ > 0 ? questions[currentQ - 1] : null;
-    const showPassage = question.passage && (!prevQ || prevQ.passage !== question.passage);
 
     const isLastQuestion = currentQ === questions.length - 1;
 
@@ -281,7 +281,7 @@ export default function ProficiencyPage() {
 
           {isLastQuestion ? (
             <Button onClick={handleSubmit} disabled={selectedOption === null || saving}>
-              {saving ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Submitting...</> : "Submit Test"}
+              {saving ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Submitting...</> : "Submit Assessment"}
             </Button>
           ) : (
             <Button onClick={handleNext} disabled={selectedOption === null}>
@@ -297,8 +297,8 @@ export default function ProficiencyPage() {
   return (
     <div className="space-y-6 animate-fade-in max-w-2xl">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">English Proficiency Test</h1>
-        <p className="text-sm text-muted-foreground mt-1">Assess your English proficiency level and earn a badge</p>
+        <h1 className="text-2xl font-bold text-foreground">Skills Check</h1>
+        <p className="text-sm text-muted-foreground mt-1">A private assessment of your current strengths and areas to develop</p>
       </div>
 
       {lastResult && (
@@ -326,7 +326,7 @@ export default function ProficiencyPage() {
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">Level: {lastResult.level_awarded}</span>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">Your assessed level: {lastResult.level_awarded}</span>
             <span className="text-xs text-muted-foreground">Taken {format(new Date(lastResult.taken_at), "MMM d, yyyy")}</span>
           </div>
         </div>
@@ -338,7 +338,7 @@ export default function ProficiencyPage() {
             <FlaskConical className="h-6 w-6 text-primary-foreground" />
           </div>
           <div>
-            <h2 className="font-semibold text-foreground">Self-Assessment Test</h2>
+            <h2 className="font-semibold text-foreground">Private Skills Assessment</h2>
             <p className="text-xs text-muted-foreground">40 questions · 3 sections · ~30 minutes</p>
           </div>
         </div>
@@ -370,7 +370,7 @@ export default function ProficiencyPage() {
 
         <div className="flex items-center gap-3">
           {canRetake ? (
-            <Button onClick={handleStartTest}>Start Test</Button>
+            <Button onClick={handleStartTest}>Begin Assessment</Button>
           ) : (
             <Button disabled>Retake available in 30 days</Button>
           )}

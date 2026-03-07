@@ -2,16 +2,23 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { GraduationCap, BookOpen, Award, ArrowRight, Users, CheckCircle, Sparkles } from "lucide-react";
-import { PATHWAYS } from "@/lib/constants";
+import { BookOpen, Award, ArrowRight, ArrowDown, CheckCircle, Shield, Target, Trophy } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import heroBg from "@/assets/hero-bg.jpg";
 
-const STEPS = [
-  { icon: Users, title: "Sign Up", desc: "Register with your LatinHire invitation code to access the academy" },
-  { icon: BookOpen, title: "Complete Courses", desc: "Learn at your own pace with expert-crafted professional development content" },
-  { icon: Award, title: "Earn Certifications", desc: "Showcase your expertise with verifiable professional certificates" },
+const VALUE_PILLARS = [
+  { icon: "📚", title: "Practical Learning", desc: "Short, focused courses designed for working tutors" },
+  { icon: "🏅", title: "Private Progress", desc: "Track your growth with badges and specialization milestones" },
+  { icon: "📜", title: "Verified Credentials", desc: "Earn certificates with verification links for your CV and LinkedIn" },
+  { icon: "🎯", title: "Specialization Tracks", desc: "Build advanced expertise in your teaching area" },
+];
+
+const HOW_IT_WORKS = [
+  { step: 1, title: "Learn", desc: "Complete practical courses at your own pace" },
+  { step: 2, title: "Assess", desc: "Check your skills with private assessments" },
+  { step: 3, title: "Earn", desc: "Receive verified badges and certificates" },
+  { step: 4, title: "Share", desc: "Use credentials on your CV and LinkedIn" },
 ];
 
 const Index = () => {
@@ -31,6 +38,10 @@ const Index = () => {
     },
   });
 
+  const scrollToHowItWorks = () => {
+    document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
@@ -42,109 +53,88 @@ const Index = () => {
         </div>
         <div className="container relative z-10 py-20 md:py-32">
           <div className="max-w-2xl">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent/20 px-4 py-1.5 text-sm font-medium text-accent">
-              <Sparkles className="h-4 w-4" />
-              Free professional development
-            </div>
             <h1 className="mb-6 text-4xl font-extrabold leading-tight text-primary-foreground md:text-6xl">
-              Grow as a Professional Tutor
+              Professional Growth for Active LatinHire Tutors
             </h1>
             <p className="mb-8 text-lg text-primary-foreground/70 md:text-xl">
-              Optional professional development resources and certifications for independent tutors. Build skills, earn credentials, and discover new opportunities.
+              A private learning and credential platform. Complete practical courses, earn verified certificates, and build credentials for your CV and LinkedIn.
             </p>
             <div className="flex flex-wrap gap-4">
               <Button variant="hero" size="lg" asChild>
-                <Link to="/register">
-                  Start Learning — It's Free
+                <Link to="/login">
+                  Enter the Academy
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-              <Button variant="hero-outline" size="lg" asChild>
-                <Link to="/dashboard/courses">Explore Courses</Link>
+              <Button variant="hero-outline" size="lg" onClick={scrollToHowItWorks}>
+                See How It Works <ArrowDown className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* How It Works */}
+      {/* Value Pillars */}
       <section className="container py-20">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-foreground mb-3">How It Works</h2>
-          <p className="text-muted-foreground max-w-lg mx-auto">
-            Professional growth at your own pace — three simple steps to get started
-          </p>
-        </div>
-        <div className="grid gap-8 md:grid-cols-3">
-          {STEPS.map((step, i) => (
-            <div key={i} className="relative rounded-xl border bg-card p-8 text-center shadow-card hover:shadow-card-hover transition-shadow duration-300">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl gradient-navy">
-                <step.icon className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <div className="absolute -top-3 left-6 flex h-7 w-7 items-center justify-center rounded-full gradient-orange text-xs font-bold text-accent-foreground">
-                {i + 1}
-              </div>
-              <h3 className="mb-2 text-lg font-semibold text-foreground">{step.title}</h3>
-              <p className="text-sm text-muted-foreground">{step.desc}</p>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {VALUE_PILLARS.map((pillar) => (
+            <div key={pillar.title} className="rounded-xl border bg-card p-6 shadow-card hover:shadow-card-hover transition-shadow duration-300">
+              <div className="text-4xl mb-4">{pillar.icon}</div>
+              <h3 className="mb-2 text-lg font-semibold text-foreground">{pillar.title}</h3>
+              <p className="text-sm text-muted-foreground">{pillar.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Learning Paths */}
-      <section className="bg-secondary/50 py-20">
+      {/* How It Works */}
+      <section id="how-it-works" className="bg-secondary/50 py-20">
         <div className="container">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-3">Learning Paths</h2>
+            <h2 className="text-3xl font-bold text-foreground mb-3">How It Works</h2>
             <p className="text-muted-foreground max-w-lg mx-auto">
-              Structured pathways designed to develop specialized teaching expertise
+              Four steps to build your professional credentials
             </p>
           </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {PATHWAYS.map((path) => (
-              <div
-                key={path.id}
-                className="group rounded-xl border bg-card p-6 shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1"
-              >
-                <div className="mb-4 text-4xl">{path.icon}</div>
-                <h3 className="mb-2 text-lg font-semibold text-foreground">{path.name}</h3>
-                <p className="text-sm text-muted-foreground mb-4">{path.description}</p>
-                <Link
-                  to="/dashboard/pathways"
-                  className="inline-flex items-center text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-                >
-                  View Path <ArrowRight className="ml-1 h-3 w-3" />
-                </Link>
+          <div className="grid gap-8 md:grid-cols-4">
+            {HOW_IT_WORKS.map((step) => (
+              <div key={step.step} className="relative rounded-xl border bg-card p-8 text-center shadow-card">
+                <div className="absolute -top-3 left-6 flex h-7 w-7 items-center justify-center rounded-full gradient-orange text-xs font-bold text-accent-foreground">
+                  {step.step}
+                </div>
+                <h3 className="mb-2 text-lg font-semibold text-foreground">{step.title}</h3>
+                <p className="text-sm text-muted-foreground">{step.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Certifications */}
+      {/* Credential Value */}
       <section className="container py-20">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-foreground mb-3">Professional Certifications</h2>
-          <p className="text-muted-foreground max-w-lg mx-auto">
-            Earn verifiable credentials to showcase your teaching expertise
+        <div className="rounded-xl border bg-card p-8 md:p-12 shadow-card text-center max-w-3xl mx-auto">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl gradient-orange">
+            <Award className="h-8 w-8 text-accent-foreground" />
+          </div>
+          <h2 className="text-2xl font-bold text-foreground mb-4">Credential Value</h2>
+          <p className="text-muted-foreground">
+            Your certificates include a unique verification link, downloadable PDF, and LinkedIn-ready details. Built to support your professional profile.
           </p>
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {[
-            "LatinHire Certified Professional Tutor",
-            "English Conversation Specialist",
-            "STEM Teaching Specialist",
-          ].map((cert) => (
-            <div
-              key={cert}
-              className="flex items-center gap-3 rounded-xl border bg-card p-5 shadow-card"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg gradient-orange">
-                <CheckCircle className="h-5 w-5 text-accent-foreground" />
-              </div>
-              <span className="font-medium text-foreground text-sm">{cert}</span>
+      </section>
+
+      {/* Private by Design */}
+      <section className="bg-secondary/50 py-20">
+        <div className="container">
+          <div className="rounded-xl gradient-navy p-8 md:p-12 text-center max-w-3xl mx-auto">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-foreground/10">
+              <Shield className="h-8 w-8 text-accent" />
             </div>
-          ))}
+            <h2 className="text-2xl font-bold text-primary-foreground mb-4">Private by Design</h2>
+            <p className="text-primary-foreground/70">
+              Tutor Academy is a private platform for LatinHire tutors. Your progress, achievements, and learning are yours alone.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -154,8 +144,8 @@ const Index = () => {
           <div className="container">
             <div className="grid gap-8 md:grid-cols-3 text-center">
               {[
-                { value: stats.tutors, label: "Tutors Trained" },
-                { value: stats.certs, label: "Certificates Issued" },
+                { value: stats.tutors, label: "Active Learners" },
+                { value: stats.certs, label: "Credentials Issued" },
                 { value: stats.courses, label: "Professional Courses" },
               ].map((stat) => (
                 <div key={stat.label}>
@@ -168,15 +158,15 @@ const Index = () => {
         </section>
       )}
 
-      {/* CTA */}
+      {/* Final CTA */}
       <section className="container py-20 text-center">
-        <h2 className="text-3xl font-bold text-foreground mb-4">Ready to Grow Your Teaching Career?</h2>
+        <h2 className="text-3xl font-bold text-foreground mb-4">Start Your Professional Development</h2>
         <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-          Professional development at your own pace. Free for all LatinHire network tutors.
+          Build credentials at your own pace. Available for all active LatinHire tutors.
         </p>
         <Button variant="success" size="lg" asChild>
           <Link to="/register">
-            Get Started Now <ArrowRight className="ml-2 h-4 w-4" />
+            Enter the Academy <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
       </section>

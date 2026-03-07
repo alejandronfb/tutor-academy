@@ -21,12 +21,12 @@ import { NotificationBell } from "@/components/NotificationBell";
 
 const NAV_ITEMS = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Courses", url: "/dashboard/courses", icon: BookOpen },
-  { title: "Learning Paths", url: "/dashboard/pathways", icon: Route },
+  { title: "Learning Library", url: "/dashboard/courses", icon: BookOpen },
+  { title: "Specializations", url: "/dashboard/pathways", icon: Route },
   { title: "Certifications", url: "/dashboard/certifications", icon: Award },
   { title: "Badges", url: "/dashboard/badges", icon: Trophy },
-  { title: "Opportunities", url: "/dashboard/opportunities", icon: Briefcase },
-  { title: "Proficiency Test", url: "/dashboard/proficiency", icon: FlaskConical },
+  { title: "Advanced Eligibility", url: "/dashboard/opportunities", icon: Briefcase },
+  { title: "Skills Check", url: "/dashboard/proficiency", icon: FlaskConical },
   { title: "Profile", url: "/dashboard/profile", icon: User },
 ];
 
@@ -43,7 +43,6 @@ function AppSidebar() {
       if (user) {
         const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
         setIsAdmin(!!data);
-        // Check content_creator role
         const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
         const hasCreator = (roles ?? []).some((r: any) => r.role === "content_creator");
         setIsCreator(!!data || hasCreator);

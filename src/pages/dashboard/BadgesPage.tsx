@@ -30,33 +30,58 @@ export default function BadgesPage() {
   }
 
   const { badges, unlockedIds } = data!;
+  const earned = badges.filter((b: any) => unlockedIds.includes(b.id));
+  const available = badges.filter((b: any) => !unlockedIds.includes(b.id));
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">My Badges</h1>
-        <p className="text-sm text-muted-foreground mt-1">Achievements and milestones in your learning journey</p>
-        <p className="text-xs text-muted-foreground mt-1">{unlockedIds.length} of {badges.length} unlocked</p>
+        <h1 className="text-2xl font-bold text-foreground">Your Badges</h1>
+        <p className="text-sm text-muted-foreground mt-1">Private achievement milestones in your professional development</p>
+        <p className="text-xs text-muted-foreground mt-1">{unlockedIds.length} of {badges.length} earned</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">
-        {badges.map((badge: any) => {
-          const unlocked = unlockedIds.includes(badge.id);
-          return (
-            <Tooltip key={badge.id}>
-              <TooltipTrigger asChild>
-                <div className={`rounded-xl border p-5 text-center transition-all ${unlocked ? "bg-card shadow-card" : "bg-muted/50 opacity-50 grayscale"}`}>
-                  <div className="text-4xl mb-2">{badge.icon || "🏅"}</div>
-                  <div className="font-medium text-xs text-foreground">{badge.name}</div>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs">{unlocked ? "✓ Unlocked!" : `How to unlock: ${badge.description}`}</p>
-              </TooltipContent>
-            </Tooltip>
-          );
-        })}
-      </div>
+      {earned.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold text-foreground mb-3">Earned</h2>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">
+            {earned.map((badge: any) => (
+              <Tooltip key={badge.id}>
+                <TooltipTrigger asChild>
+                  <div className="rounded-xl border p-5 text-center bg-card shadow-card">
+                    <div className="text-4xl mb-2">{badge.icon || "🏅"}</div>
+                    <div className="font-medium text-xs text-foreground">{badge.name}</div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">✓ Earned! {badge.description}</p>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {available.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold text-foreground mb-3">Available</h2>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">
+            {available.map((badge: any) => (
+              <Tooltip key={badge.id}>
+                <TooltipTrigger asChild>
+                  <div className="rounded-xl border p-5 text-center bg-muted/50 opacity-50 grayscale">
+                    <div className="text-4xl mb-2">{badge.icon || "🏅"}</div>
+                    <div className="font-medium text-xs text-foreground">{badge.name}</div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">How to earn: {badge.description}</p>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

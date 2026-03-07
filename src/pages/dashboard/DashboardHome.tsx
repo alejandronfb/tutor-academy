@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { BookOpen, Award, Trophy, Flame, ArrowRight, TrendingUp } from "lucide-react";
+import { BookOpen, Award, Trophy, Flame, ArrowRight, TrendingUp, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -25,6 +25,19 @@ export default function DashboardHome() {
       const totalCourses = (await supabase.from("courses").select("id", { count: "exact", head: true })).count || 0;
       const completedCourses = (enrollmentsRes.data || []).filter((e) => e.completed_at).length;
 
+      // Get monthly progress
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      const monthStr = startOfMonth.toISOString();
+
+      const [monthlyLessons, monthlyBadges] = await Promise.all([
+        supabase.from("lesson_completions").select("id", { count: "exact", head: true }).eq("tutor_id", user.id).gte("completed_at", monthStr),
+        supabase.from("user_badges").select("id", { count: "exact", head: true }).eq("tutor_id", user.id).gte("unlocked_at", monthStr),
+      ]);
+
+      const monthlyEnrollments = (enrollmentsRes.data || []).filter((e) => e.completed_at && new Date(e.completed_at) >= startOfMonth).length;
+
       return {
         profile: profileRes.data,
         certCount: certsRes.data?.length || 0,
@@ -32,6 +45,11 @@ export default function DashboardHome() {
         completedCourses,
         totalCourses,
         courses: coursesRes.data || [],
+        monthly: {
+          courses: monthlyEnrollments,
+          lessons: monthlyLessons.count || 0,
+          badges: monthlyBadges.count || 0,
+        },
       };
     },
   });
@@ -47,7 +65,7 @@ export default function DashboardHome() {
     );
   }
 
-  const { profile, certCount, badgeCount, completedCourses, totalCourses, courses } = data;
+  const { profile, certCount, badgeCount, completedCourses, totalCourses, courses, monthly } = data;
   const levelInfo = TUTOR_LEVELS[(profile?.tutor_level || 1) as keyof typeof TUTOR_LEVELS];
 
   return (
@@ -58,7 +76,7 @@ export default function DashboardHome() {
           <h1 className="text-2xl font-bold text-primary-foreground">
             Welcome back{profile ? `, ${profile.full_name.split(" ")[0]}` : ""}! 👋
           </h1>
-          <p className="text-sm text-primary-foreground/60 mt-1">Continue building your teaching expertise</p>
+          <p className="text-sm text-primary-foreground/60 mt-1">Build your professional credentials with practical learning and verified achievements.</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 rounded-lg bg-primary-foreground/10 px-4 py-2">
@@ -74,10 +92,10 @@ export default function DashboardHome() {
       {/* Stats cards */}
       <div className="grid gap-4 md:grid-cols-4">
         {[
-          { label: "Courses Completed", value: `${completedCourses}/${totalCourses}`, icon: BookOpen, color: "text-primary" },
-          { label: "Certifications Earned", value: String(certCount), icon: Award, color: "text-accent" },
-          { label: "Badges Unlocked", value: String(badgeCount), icon: Trophy, color: "text-warning" },
-          { label: "Current Level", value: levelInfo.name, icon: TrendingUp, color: "text-primary" },
+          { label: "Learning Completed", value: `${completedCourses}/${totalCourses}`, icon: BookOpen, color: "text-primary" },
+          { label: "Credentials Earned", value: String(certCount), icon: Award, color: "text-accent" },
+          { label: "Badges Earned", value: String(badgeCount), icon: Trophy, color: "text-warning" },
+          { label: "Current Track", value: levelInfo.name, icon: TrendingUp, color: "text-primary" },
         ].map((stat) => (
           <div key={stat.label} className="rounded-xl border bg-card p-5 shadow-card">
             <div className="flex items-center justify-between mb-2">
@@ -89,27 +107,37 @@ export default function DashboardHome() {
         ))}
       </div>
 
-      {/* Activity ranking */}
+      {/* Your Progress This Month */}
       <div className="rounded-xl border bg-card p-5 shadow-card">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 mb-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg gradient-blue-light">
-            <TrendingUp className="h-5 w-5 text-accent-foreground" />
+            <Calendar className="h-5 w-5 text-accent-foreground" />
           </div>
           <div>
-            <p className="font-medium text-foreground">
-              {completedCourses > 0 ? `You've completed ${completedCourses} course${completedCourses > 1 ? "s" : ""}! Keep going! 🚀` : "You're making great progress! 🚀"}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {completedCourses === 0 ? "Complete your first course to see your activity ranking among academy tutors." : "Continue learning to unlock more badges and certifications."}
-            </p>
+            <p className="font-medium text-foreground">Your Progress This Month</p>
+            <p className="text-sm text-muted-foreground">Private summary of your recent activity</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="text-center p-3 rounded-lg bg-muted">
+            <p className="text-2xl font-bold text-foreground">{monthly.courses}</p>
+            <p className="text-xs text-muted-foreground">Courses Completed</p>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-muted">
+            <p className="text-2xl font-bold text-foreground">{monthly.lessons}</p>
+            <p className="text-xs text-muted-foreground">Lessons Completed</p>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-muted">
+            <p className="text-2xl font-bold text-foreground">{monthly.badges}</p>
+            <p className="text-xs text-muted-foreground">Badges Earned</p>
           </div>
         </div>
       </div>
 
-      {/* Recommended Courses */}
+      {/* Recommended Next Steps */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-foreground">Recommended Courses</h2>
+          <h2 className="text-lg font-semibold text-foreground">Recommended Next Steps</h2>
           <Button variant="ghost" size="sm" asChild>
             <Link to="/dashboard/courses">View all <ArrowRight className="ml-1 h-3 w-3" /></Link>
           </Button>
@@ -122,7 +150,7 @@ export default function DashboardHome() {
               <h3 className="font-semibold text-foreground text-sm mb-1">{course.title}</h3>
               <p className="text-xs text-muted-foreground mb-3">{course.duration_hours}h • {course.difficulty}</p>
               <Button size="sm" variant="outline" className="w-full" asChild>
-                <Link to={`/dashboard/courses/${course.slug}`}>Start Course</Link>
+                <Link to={`/dashboard/courses/${course.slug}`}>Begin Learning</Link>
               </Button>
             </div>
           ))}
@@ -131,7 +159,7 @@ export default function DashboardHome() {
 
       {/* Coming Soon */}
       <div className="grid gap-4 md:grid-cols-3">
-        {["AI Teaching Coach", "Teaching Simulations", "Live Workshops"].map((feature) => (
+        {["AI Skills Coach", "Practice Scenarios", "Expert Sessions"].map((feature) => (
           <div key={feature} className="rounded-xl border border-dashed bg-card/50 p-5 text-center">
             <div className="text-2xl mb-2">🔮</div>
             <h3 className="font-medium text-foreground text-sm">{feature}</h3>
