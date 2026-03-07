@@ -344,15 +344,66 @@ export default function CourseDetail() {
 
               {currentLesson && (
                 <div className="prose prose-sm max-w-none">
-                  {currentLesson.content.split("\n").map((line: string, i: number) => {
-                    if (line.startsWith("# ")) return <h1 key={i} className="text-2xl font-bold text-foreground mb-4">{line.slice(2)}</h1>;
-                    if (line.startsWith("## ")) return <h2 key={i} className="text-xl font-semibold text-foreground mt-6 mb-3">{line.slice(3)}</h2>;
-                    if (line.startsWith("### ")) return <h3 key={i} className="text-lg font-semibold text-foreground mt-4 mb-2">{line.slice(4)}</h3>;
-                    if (line.startsWith("- ")) return <li key={i} className="text-sm text-muted-foreground ml-4">{line.slice(2)}</li>;
-                    if (line.startsWith("**") && line.endsWith("**")) return <p key={i} className="text-sm font-semibold text-foreground mt-2">{line.slice(2, -2)}</p>;
-                    if (line.trim() === "") return <br key={i} />;
-                    return <p key={i} className="text-sm text-muted-foreground leading-relaxed">{line}</p>;
-                  })}
+                  {(() => {
+                    const renderInline = (text: string) => {
+                      const parts = text.split(/(\*\*[^*]+\*\*)/g);
+                      return parts.map((part, j) => {
+                        if (part.startsWith("**") && part.endsWith("**")) {
+                          return <strong key={j} className="font-semibold text-foreground">{part.slice(2, -2)}</strong>;
+                        }
+                        return <span key={j}>{part}</span>;
+                      });
+                    };
+
+                    let inCodeBlock = false;
+                    let codeLines: string[] = [];
+                    const elements: React.ReactNode[] = [];
+
+                    currentLesson.content.split("\n").forEach((line: string, i: number) => {
+                      if (line.startsWith("```")) {
+                        if (inCodeBlock) {
+                          elements.push(
+                            <pre key={`code-${i}`} className="bg-muted rounded-lg p-4 my-3 overflow-x-auto">
+                              <code className="text-xs text-foreground">{codeLines.join("\n")}</code>
+                            </pre>
+                          );
+                          codeLines = [];
+                          inCodeBlock = false;
+                        } else {
+                          inCodeBlock = true;
+                        }
+                        return;
+                      }
+                      if (inCodeBlock) { codeLines.push(line); return; }
+
+                      if (line.startsWith("# ")) { elements.push(<h1 key={i} className="text-2xl font-bold text-foreground mb-4">{line.slice(2)}</h1>); return; }
+                      if (line.startsWith("## ")) { elements.push(<h2 key={i} className="text-xl font-semibold text-foreground mt-6 mb-3">{line.slice(3)}</h2>); return; }
+                      if (line.startsWith("### ")) { elements.push(<h3 key={i} className="text-lg font-semibold text-foreground mt-4 mb-2">{line.slice(4)}</h3>); return; }
+                      if (line.startsWith("> ")) { elements.push(<blockquote key={i} className="border-l-4 border-primary/30 pl-4 py-1 my-3 italic text-sm text-muted-foreground">{renderInline(line.slice(2))}</blockquote>); return; }
+                      if (line.startsWith("- [ ] ")) { elements.push(<li key={i} className="text-sm text-muted-foreground ml-4 list-none flex items-center gap-2"><span className="inline-block w-4 h-4 border border-border rounded" />{renderInline(line.slice(6))}</li>); return; }
+                      if (line.startsWith("- ")) { elements.push(<li key={i} className="text-sm text-muted-foreground ml-4">{renderInline(line.slice(2))}</li>); return; }
+                      if (/^\d+\.\s/.test(line)) { elements.push(<li key={i} className="text-sm text-muted-foreground ml-4 list-decimal">{renderInline(line.replace(/^\d+\.\s/, ""))}</li>); return; }
+                      if (line.startsWith("|") && line.endsWith("|")) {
+                        if (line.includes("---")) return; // separator row
+                        const cells = line.split("|").filter(c => c.trim() !== "");
+                        const isHeader = i > 0 && currentLesson.content.split("\n")[i + 1]?.includes("---");
+                        elements.push(
+                          <div key={i} className="flex gap-0 text-xs">
+                            {cells.map((cell: string, ci: number) => (
+                              <div key={ci} className={`flex-1 px-3 py-2 border border-border ${isHeader ? "font-semibold bg-muted" : ""}`}>
+                                {renderInline(cell.trim())}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                        return;
+                      }
+                      if (line.trim() === "") { elements.push(<br key={i} />); return; }
+                      elements.push(<p key={i} className="text-sm text-muted-foreground leading-relaxed">{renderInline(line)}</p>);
+                    });
+
+                    return elements;
+                  })()}
                 </div>
               )}
 
