@@ -43,7 +43,7 @@ export default function CreatorCourses() {
       if (!user) throw new Error("Not authenticated");
 
       const slug = `new-course-${Date.now()}`;
-      const { data, error } = await supabase.from("courses").insert({
+      const { data, error } = await (supabase.from("courses") as any).insert({
         title: "New Course",
         slug,
         pathway: "Core",

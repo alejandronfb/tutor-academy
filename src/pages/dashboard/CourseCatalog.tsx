@@ -19,6 +19,7 @@ export default function CourseCatalog() {
       const { data, error } = await supabase
         .from("courses")
         .select("*, course_modules(id)")
+        .eq("status" as any, "published")
         .order("sort_order");
       if (error) throw error;
       return data;
