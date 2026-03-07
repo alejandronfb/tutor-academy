@@ -378,7 +378,7 @@ export default function CourseDetail() {
                     {markCompleteMutation.isPending ? (
                       <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Saving...</>
                     ) : (
-                      <><CheckCircle className="mr-1 h-4 w-4" /> Mark as Complete</>
+                      <><CheckCircle className="mr-1 h-4 w-4" /> Mark Complete</>
                     )}
                   </Button>
                 )}
