@@ -21,7 +21,7 @@ export default function CourseCatalog() {
         .eq("status", "published")
         .order("sort_order");
       if (error) throw error;
-      return data;
+      return data as any[];
     },
   });
 
