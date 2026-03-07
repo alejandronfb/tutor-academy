@@ -1,0 +1,1 @@
+UPDATE public.courses SET icon = '🤖' WHERE slug = 'ai-tools-tutoring';
