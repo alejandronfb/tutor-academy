@@ -15,7 +15,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { NavLink } from "@/components/NavLink";
-import { GraduationCap, LayoutDashboard, BookOpen, Route, Award, Trophy, User, Briefcase, LogOut, FlaskConical, Shield } from "lucide-react";
+import { GraduationCap, LayoutDashboard, BookOpen, Route, Award, Trophy, User, Briefcase, LogOut, FlaskConical, Shield, Paintbrush } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/NotificationBell";
 
@@ -35,6 +35,7 @@ function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isCreator, setIsCreator] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -42,6 +43,10 @@ function AppSidebar() {
       if (user) {
         const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
         setIsAdmin(!!data);
+        // Check content_creator role
+        const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+        const hasCreator = (roles ?? []).some((r: any) => r.role === "content_creator");
+        setIsCreator(!!data || hasCreator);
       }
     })();
   }, []);
@@ -75,6 +80,16 @@ function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {isCreator && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink to="/creator" className="hover:bg-sidebar-accent/50 text-primary" activeClassName="bg-sidebar-accent font-medium">
+                      <Paintbrush className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>Content Studio</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               {isAdmin && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>

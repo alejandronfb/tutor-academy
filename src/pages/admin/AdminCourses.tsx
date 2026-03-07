@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Edit, Trash2, GripVertical, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import RichTextEditor from "@/components/RichTextEditor";
 
 const EMPTY_COURSE = { title: "", slug: "", description: "", pathway: "Core", difficulty: "Beginner", duration_hours: 0, certificate_title: "", icon: "📚", sort_order: 0 };
 
@@ -313,7 +314,7 @@ export default function AdminCourses() {
             <div className="space-y-3">
               <div><Label>Title</Label><Input value={lessonDialog.title} onChange={(e) => setLessonDialog({ ...lessonDialog, title: e.target.value })} /></div>
               <div><Label>Sort Order</Label><Input type="number" value={lessonDialog.sort_order ?? 0} onChange={(e) => setLessonDialog({ ...lessonDialog, sort_order: Number(e.target.value) })} /></div>
-              <div><Label>Content (Markdown)</Label><Textarea className="min-h-[300px] font-mono text-sm" value={lessonDialog.content} onChange={(e) => setLessonDialog({ ...lessonDialog, content: e.target.value })} /></div>
+              <div><Label>Content</Label><RichTextEditor content={lessonDialog.content} onChange={(html) => setLessonDialog({ ...lessonDialog, content: html })} /></div>
               <Button className="w-full" onClick={() => saveLesson.mutate(lessonDialog)}>Save Lesson</Button>
             </div>
           )}

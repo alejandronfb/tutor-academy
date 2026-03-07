@@ -4,11 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, ArrowUpDown } from "lucide-react";
+import { Search, ArrowUpDown, Paintbrush } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminTutors() {
@@ -25,6 +25,17 @@ export default function AdminTutors() {
       return data ?? [];
     },
   });
+
+  // Fetch content creator role info
+  const { data: creatorRoles = [] } = useQuery({
+    queryKey: ["admin-creator-roles"],
+    queryFn: async () => {
+      const { data } = await supabase.from("user_roles").select("user_id, role");
+      return (data ?? []).filter((r: any) => r.role === "content_creator");
+    },
+  });
+
+  const creatorUserIds = new Set(creatorRoles.map((r: any) => r.user_id));
 
   const { data: tutorDetail } = useQuery({
     queryKey: ["admin-tutor-detail", selectedTutor?.id],
@@ -47,6 +58,23 @@ export default function AdminTutors() {
       if (error) throw error;
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-tutors"] }); toast.success("Level updated"); },
+  });
+
+  const toggleCreatorRole = useMutation({
+    mutationFn: async ({ userId, grant }: { userId: string; grant: boolean }) => {
+      if (grant) {
+        const { error } = await (supabase.from("user_roles") as any).insert({ user_id: userId, role: "content_creator" });
+        if (error) throw error;
+      } else {
+        const { error } = await (supabase.from("user_roles") as any).delete().eq("user_id", userId).eq("role", "content_creator");
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-creator-roles"] });
+      toast.success("Role updated");
+    },
+    onError: (e: any) => toast.error(e.message),
   });
 
   const toggleSort = (field: string) => {
@@ -85,37 +113,60 @@ export default function AdminTutors() {
                 <TableHead>Specializations</TableHead>
                 <SortHeader field="tutor_level">Level</SortHeader>
                 <SortHeader field="learning_streak">Streak</SortHeader>
+                <TableHead>Role</TableHead>
                 <SortHeader field="created_at">Joined</SortHeader>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((t: any) => (
-                <TableRow key={t.id}>
-                  <TableCell className="font-medium">{t.full_name}</TableCell>
-                  <TableCell>{t.country ?? "–"}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {(t.specializations ?? []).map((s: string) => <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>)}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Select value={String(t.tutor_level ?? 1)} onValueChange={(v) => updateLevel.mutate({ id: t.id, level: Number(v) })}>
-                      <SelectTrigger className="w-16 h-8"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {[1,2,3,4,5].map(l => <SelectItem key={l} value={String(l)}>{l}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>{t.learning_streak ?? 0}🔥</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{t.created_at ? new Date(t.created_at).toLocaleDateString() : "–"}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedTutor(t)}>View</Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filtered.map((t: any) => {
+                const isCreator = creatorUserIds.has(t.id);
+                return (
+                  <TableRow key={t.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{t.full_name}</span>
+                        {isCreator && (
+                          <Badge variant="secondary" className="text-xs gap-1">
+                            <Paintbrush className="h-3 w-3" /> Creator
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>{t.country ?? "–"}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {(t.specializations ?? []).map((s: string) => <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Select value={String(t.tutor_level ?? 1)} onValueChange={(v) => updateLevel.mutate({ id: t.id, level: Number(v) })}>
+                        <SelectTrigger className="w-16 h-8"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {[1,2,3,4,5].map(l => <SelectItem key={l} value={String(l)}>{l}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>{t.learning_streak ?? 0}🔥</TableCell>
+                    <TableCell>
+                      <Button
+                        variant={isCreator ? "destructive" : "outline"}
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => toggleCreatorRole.mutate({ userId: t.id, grant: !isCreator })}
+                      >
+                        {isCreator ? "Remove Creator" : "Make Creator"}
+                      </Button>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{t.created_at ? new Date(t.created_at).toLocaleDateString() : "–"}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedTutor(t)}>View</Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
               {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No tutors found</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No tutors found</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
