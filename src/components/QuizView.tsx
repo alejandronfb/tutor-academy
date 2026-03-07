@@ -99,9 +99,9 @@ export default function QuizView({ quizId, courseId, courseTitle, moduleTitle, i
       });
     }
 
-    const { data: courseData } = await supabase
-      .from("courses")
-      .select("slug, certificate_title, title, certificate_template")
+    const { data: courseData } = await (supabase
+      .from("courses") as any)
+      .select("slug, certificate_title, title, certificate_template, certification_type, certification_validity_months")
       .eq("id", cId)
       .single();
 
@@ -129,14 +129,23 @@ export default function QuizView({ quizId, courseId, courseTitle, moduleTitle, i
         .maybeSingle();
 
       if (!existingCert) {
-        const { data: newCert } = await supabase.from("certifications").insert({
+        const expiresAt = courseData.certification_type === "renewable"
+          ? new Date(Date.now() + (courseData.certification_validity_months || 12) * 30 * 24 * 60 * 60 * 1000).toISOString()
+          : null;
+        const { data: newCert } = await (supabase.from("certifications") as any).insert({
           tutor_id: userId,
           course_id: cId,
           title: courseData.certificate_title,
+          expires_at: expiresAt,
         }).select("verification_id").single();
         certVerificationId = newCert?.verification_id || "";
         trackEvent("certification_earned", { cert: courseData.certificate_title });
       } else {
+        // Handle renewal for renewable certs
+        if (courseData.certification_type === "renewable") {
+          const newExpiry = new Date(Date.now() + (courseData.certification_validity_months || 12) * 30 * 24 * 60 * 60 * 1000).toISOString();
+          await (supabase.from("certifications") as any).update({ renewed_at: new Date().toISOString(), expires_at: newExpiry }).eq("id", existingCert.id);
+        }
         certVerificationId = existingCert.verification_id;
       }
     }
