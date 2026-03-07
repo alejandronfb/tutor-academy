@@ -249,6 +249,7 @@ export default function ProficiencyPage() {
             <p><strong>Scoring:</strong> 60-74% = B2 · 75-89% = C1 · 90-100% = C2</p>
             <p className="mt-1">+75 activity points earned</p>
             <p className="mt-1">Retake available in 30 days</p>
+            <p className="mt-1">We recommend retaking the Skills Check every 6 months to track your progress.</p>
           </div>
 
           <div className="text-center">
