@@ -69,9 +69,27 @@ export default function CreatorCourseEdit() {
     setTimeout(() => setForm({ ...course }), 0);
   }
 
+  // Fetch prerequisites
+  const { data: allCourses = [] } = useQuery({
+    queryKey: ["creator-all-courses"],
+    queryFn: async () => {
+      const { data } = await supabase.from("courses").select("id, title").order("title");
+      return (data ?? []).filter((c: any) => c.id !== id);
+    },
+    enabled: !!id,
+  });
+
+  const { data: prerequisites = [] } = useQuery({
+    queryKey: ["creator-prerequisites", id],
+    queryFn: async () => {
+      const { data } = await (supabase.from("specialization_prerequisites") as any).select("prerequisite_course_id").eq("course_id", id!);
+      return (data ?? []).map((p: any) => p.prerequisite_course_id) as string[];
+    },
+    enabled: !!id,
+  });
+
   const saveCourse = useMutation({
     mutationFn: async (values: any) => {
-      // Auto-gen slug from title if empty
       if (!values.slug) values.slug = values.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
       const { error } = await (supabase.from("courses") as any).update({
         title: values.title,
@@ -84,11 +102,25 @@ export default function CreatorCourseEdit() {
         certificate_template: values.certificate_template,
         icon: values.icon,
         status: values.status,
+        release_at: values.release_at || null,
+        certification_type: values.certification_type || "permanent",
+        certification_validity_months: values.certification_type === "renewable" ? (values.certification_validity_months || 12) : null,
       }).eq("id", id!);
       if (error) throw error;
+
+      // Save prerequisites
+      if (values._prerequisites !== undefined) {
+        await (supabase.from("specialization_prerequisites") as any).delete().eq("course_id", id!);
+        if (values._prerequisites.length > 0) {
+          await (supabase.from("specialization_prerequisites") as any).insert(
+            values._prerequisites.map((pid: string) => ({ course_id: id!, prerequisite_course_id: pid }))
+          );
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["creator-course", id] });
+      queryClient.invalidateQueries({ queryKey: ["creator-prerequisites", id] });
       toast.success("Course saved");
     },
     onError: (e: any) => toast.error(e.message),
@@ -322,6 +354,46 @@ export default function CreatorCourseEdit() {
                 </div>
               </div>
               <div><Label>Certificate Title</Label><Input value={form.certificate_title ?? ""} onChange={e => setForm({ ...form, certificate_title: e.target.value })} /></div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>Scheduled Release Date (optional)</Label>
+                  <Input type="datetime-local" value={form.release_at ? new Date(form.release_at).toISOString().slice(0, 16) : ""} onChange={e => setForm({ ...form, release_at: e.target.value ? new Date(e.target.value).toISOString() : null })} />
+                </div>
+                <div>
+                  <Label>Certification Type</Label>
+                  <Select value={form.certification_type ?? "permanent"} onValueChange={v => setForm({ ...form, certification_type: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="permanent">Permanent</SelectItem>
+                      <SelectItem value="renewable">Renewable</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.certification_type === "renewable" && (
+                  <div>
+                    <Label>Validity (months)</Label>
+                    <Input type="number" value={form.certification_validity_months ?? 12} onChange={e => setForm({ ...form, certification_validity_months: Number(e.target.value) })} />
+                  </div>
+                )}
+              </div>
+              {/* Prerequisites */}
+              <div>
+                <Label>Prerequisites (optional)</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {allCourses.map((c: any) => {
+                    const selected = (form._prerequisites ?? prerequisites).includes(c.id);
+                    return (
+                      <button key={c.id} type="button" onClick={() => {
+                        const current = form._prerequisites ?? [...prerequisites];
+                        const next = selected ? current.filter((id: string) => id !== c.id) : [...current, c.id];
+                        setForm({ ...form, _prerequisites: next });
+                      }} className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors ${selected ? "bg-primary/10 border-primary text-primary" : "bg-muted border-border text-muted-foreground hover:border-primary/50"}`}>
+                        {c.title}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -334,7 +406,7 @@ export default function CreatorCourseEdit() {
                 const modLessons = lessons.filter(l => l.module_id === mod.id);
                 return (
                   <AccordionItem key={mod.id} value={mod.id} className="border rounded-lg">
-                    <AccordionTrigger className="px-4 hover:no-underline">
+                     <AccordionTrigger className="px-4 hover:no-underline">
                       <div className="flex items-center gap-2 flex-1">
                         <span className="text-sm font-medium">{mod.sort_order}. {mod.title}</span>
                         <span className="text-xs text-muted-foreground">({modLessons.length} lessons)</span>
@@ -342,6 +414,13 @@ export default function CreatorCourseEdit() {
                     </AccordionTrigger>
                     <AccordionContent className="px-4 pb-4">
                       <div className="space-y-3">
+                        <div className="mb-2">
+                          <Label className="text-xs">Module Release Date (optional)</Label>
+                          <Input type="datetime-local" className="w-[240px] mt-1" value={mod.release_at ? new Date(mod.release_at).toISOString().slice(0, 16) : ""} onChange={e => {
+                            const val = e.target.value ? new Date(e.target.value).toISOString() : null;
+                            supabase.from("course_modules").update({ release_at: val } as any).eq("id", mod.id).then(() => queryClient.invalidateQueries({ queryKey: ["creator-modules"] }));
+                          }} />
+                        </div>
                         <div className="flex items-center gap-2">
                           <Input
                             value={mod.title}

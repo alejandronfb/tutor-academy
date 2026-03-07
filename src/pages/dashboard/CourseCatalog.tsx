@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BookOpen, Clock, Search, ArrowRight, Loader2 } from "lucide-react";
+import { BookOpen, Clock, Search, ArrowRight, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,26 +13,60 @@ export default function CourseCatalog() {
   const [pathwayFilter, setPathwayFilter] = useState("all");
   const [difficultyFilter, setDifficultyFilter] = useState("all");
 
-  const { data: courses, isLoading } = useQuery({
-    queryKey: ["courses"],
+  const { data, isLoading } = useQuery({
+    queryKey: ["courses-catalog"],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("courses") as any)
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: courses, error } = await (supabase.from("courses") as any)
         .select("*, course_modules(id)")
         .eq("status", "published")
         .order("sort_order");
       if (error) throw error;
-      return data as any[];
+
+      // Fetch prerequisites
+      const { data: prereqs } = await (supabase.from("specialization_prerequisites") as any).select("course_id, prerequisite_course_id");
+
+      // Fetch user completions
+      let completedIds: string[] = [];
+      if (user) {
+        const { data: enrollments } = await supabase.from("course_enrollments").select("course_id").eq("tutor_id", user.id).not("completed_at", "is", null);
+        completedIds = (enrollments || []).map((e: any) => e.course_id);
+      }
+
+      return { courses: (courses || []) as any[], prereqs: (prereqs || []) as any[], completedIds };
     },
   });
 
-  const filtered = (courses ?? []).filter((c) => {
+  const courses = data?.courses ?? [];
+  const prereqs = data?.prereqs ?? [];
+  const completedIds = data?.completedIds ?? [];
+  const now = new Date();
+
+  // Filter out future releases
+  const availableCourses = courses.filter((c: any) => !c.release_at || new Date(c.release_at) <= now);
+
+  const filtered = availableCourses.filter((c: any) => {
     if (search && !c.title.toLowerCase().includes(search.toLowerCase())) return false;
     if (pathwayFilter !== "all" && c.pathway !== pathwayFilter) return false;
     if (difficultyFilter !== "all" && c.difficulty !== difficultyFilter) return false;
     return true;
   });
 
-  const pathways = [...new Set((courses ?? []).map((c) => c.pathway))];
+  const pathways = [...new Set(availableCourses.map((c: any) => c.pathway))];
+
+  // Check if prerequisites are met for a course
+  const prereqsMet = (courseId: string) => {
+    const required = prereqs.filter((p: any) => p.course_id === courseId);
+    return required.every((p: any) => completedIds.includes(p.prerequisite_course_id));
+  };
+
+  const getUnmetPrereqs = (courseId: string) => {
+    const required = prereqs.filter((p: any) => p.course_id === courseId);
+    return required
+      .filter((p: any) => !completedIds.includes(p.prerequisite_course_id))
+      .map((p: any) => courses.find((c: any) => c.id === p.prerequisite_course_id)?.title)
+      .filter(Boolean);
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -41,7 +75,6 @@ export default function CourseCatalog() {
         <p className="text-sm text-muted-foreground mt-1">Practical courses for your professional development</p>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -51,9 +84,7 @@ export default function CourseCatalog() {
           <SelectTrigger className="w-[160px]"><SelectValue placeholder="Specialization" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Specializations</SelectItem>
-            {pathways.map((p) => (
-              <SelectItem key={p} value={p}>{p}</SelectItem>
-            ))}
+            {pathways.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
@@ -67,7 +98,6 @@ export default function CourseCatalog() {
         </Select>
       </div>
 
-      {/* Course Grid */}
       {isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
@@ -82,26 +112,41 @@ export default function CourseCatalog() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((course) => (
-            <div key={course.id} className="rounded-xl border bg-card p-6 shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-0.5 flex flex-col">
-              <div className="text-3xl mb-3">{course.icon || "📚"}</div>
-              <div className="flex gap-2 mb-2">
-                <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">{course.pathway}</span>
-                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">{course.difficulty}</span>
+          {filtered.map((course: any) => {
+            const locked = !prereqsMet(course.id);
+            const unmet = getUnmetPrereqs(course.id);
+            return (
+              <div key={course.id} className={`rounded-xl border bg-card p-6 shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-0.5 flex flex-col ${locked ? "opacity-75" : ""}`}>
+                <div className="text-3xl mb-3">{course.icon || "📚"}</div>
+                <div className="flex gap-2 mb-2">
+                  <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">{course.pathway}</span>
+                  <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">{course.difficulty}</span>
+                </div>
+                <h3 className="font-semibold text-foreground mb-1">{course.title}</h3>
+                <p className="text-sm text-muted-foreground mb-4 flex-1">{course.description}</p>
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
+                  <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {course.duration_hours}h</span>
+                  <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" /> {course.course_modules?.length ?? 0} modules</span>
+                </div>
+                {locked ? (
+                  <div>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
+                      <Lock className="h-3 w-3" /> Complete {unmet[0]} first
+                    </div>
+                    <Button size="sm" className="w-full" disabled>
+                      <Lock className="mr-1 h-3 w-3" /> Locked
+                    </Button>
+                  </div>
+                ) : (
+                  <Button size="sm" className="w-full" asChild>
+                    <Link to={`/dashboard/courses/${course.slug}`}>
+                      View Course <ArrowRight className="ml-1 h-3 w-3" />
+                    </Link>
+                  </Button>
+                )}
               </div>
-              <h3 className="font-semibold text-foreground mb-1">{course.title}</h3>
-              <p className="text-sm text-muted-foreground mb-4 flex-1">{course.description}</p>
-              <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
-                <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {course.duration_hours}h</span>
-                <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" /> {course.course_modules?.length ?? 0} modules</span>
-              </div>
-              <Button size="sm" className="w-full" asChild>
-                <Link to={`/dashboard/courses/${course.slug}`}>
-                  View Course <ArrowRight className="ml-1 h-3 w-3" />
-                </Link>
-              </Button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
