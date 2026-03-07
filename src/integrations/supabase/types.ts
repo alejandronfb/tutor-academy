@@ -401,6 +401,39 @@ export type Database = {
           },
         ]
       }
+      proficiency_questions: {
+        Row: {
+          correct_index: number
+          difficulty: string
+          id: string
+          options: Json
+          passage: string | null
+          question: string
+          section: string
+          sort_order: number | null
+        }
+        Insert: {
+          correct_index: number
+          difficulty: string
+          id?: string
+          options: Json
+          passage?: string | null
+          question: string
+          section: string
+          sort_order?: number | null
+        }
+        Update: {
+          correct_index?: number
+          difficulty?: string
+          id?: string
+          options?: Json
+          passage?: string | null
+          question?: string
+          section?: string
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
       proficiency_results: {
         Row: {
           grammar_score: number | null
